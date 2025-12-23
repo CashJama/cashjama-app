@@ -96,11 +96,37 @@ export default function ProfileScreen() {
 
         <View style={styles.menuSection}>
           <Text style={styles.menuSectionTitle}>Support</Text>
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(user)/faq')}>
             <View style={styles.menuItemIcon}><Ionicons name="help-circle-outline" size={22} color="#4F46E5" /></View>
             <View style={styles.menuItemContent}>
               <Text style={styles.menuItemTitle}>Help & FAQ</Text>
-              <Text style={styles.menuItemSubtitle}>Get answers to common questions</Text>
+              <Text style={styles.menuItemSubtitle}>Learn what CashJama does & doesn't do</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#6B7280" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.menuItem}>
+            <View style={styles.menuItemIcon}><Ionicons name="chatbubble-outline" size={22} color="#4F46E5" /></View>
+            <View style={styles.menuItemContent}>
+              <Text style={styles.menuItemTitle}>Contact Us</Text>
+              <Text style={styles.menuItemSubtitle}>Reach out for support</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#6B7280" />
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.menuSection}>
+          <Text style={styles.menuSectionTitle}>Legal</Text>
+          <TouchableOpacity style={styles.menuItem}>
+            <View style={styles.menuItemIcon}><Ionicons name="document-text-outline" size={22} color="#4F46E5" /></View>
+            <View style={styles.menuItemContent}>
+              <Text style={styles.menuItemTitle}>Terms of Service</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#6B7280" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.menuItem}>
+            <View style={styles.menuItemIcon}><Ionicons name="shield-outline" size={22} color="#4F46E5" /></View>
+            <View style={styles.menuItemContent}>
+              <Text style={styles.menuItemTitle}>Privacy Policy</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#6B7280" />
           </TouchableOpacity>
@@ -128,7 +154,7 @@ const styles = StyleSheet.create({
   profileInfo: { flex: 1 },
   profileName: { fontSize: 18, fontWeight: '600', color: '#FFFFFF', marginBottom: 4 },
   profileMobile: { fontSize: 14, color: '#9CA3AF' },
-  nameInput: { fontSize: 18, fontWeight: '600', color: '#FFFFFF', backgroundColor: '#1F2937', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 4 },
+  nameInput: { fontSize: 18, fontWeight: '600', color: '#FFFFFF', backgroundColor: '#1F2937', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 4, borderWidth: 1, borderColor: '#374151' },
   editButton: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(79, 70, 229, 0.1)', alignItems: 'center', justifyContent: 'center' },
   editActions: { flexDirection: 'row', gap: 8 },
   cancelButton: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#374151', alignItems: 'center', justifyContent: 'center' },
