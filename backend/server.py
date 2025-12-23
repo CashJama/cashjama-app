@@ -547,7 +547,7 @@ async def get_my_deposits(current_user: dict = Depends(get_current_user)):
     ).sort("created_at", -1).to_list(100)
     
     return {
-        "deposits": deposits,
+        "deposits": [serialize_doc(d) for d in deposits],
         "count": len(deposits)
     }
 
