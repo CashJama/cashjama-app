@@ -32,6 +32,10 @@ MSG91_API_KEY = os.environ.get('MSG91_API_KEY', None)
 MSG91_TEMPLATE_ID = os.environ.get('MSG91_TEMPLATE_ID', None)
 MSG91_SENDER_ID = os.environ.get('MSG91_SENDER_ID', 'CASHJM')
 
+# DEV MODE - Set to False in production
+DEV_MODE = os.environ.get('DEV_MODE', 'true').lower() == 'true'
+DEV_OTP = "123456"  # Fixed OTP for development testing
+
 # Create the main app
 app = FastAPI(title="CashJama API", version="1.0.0")
 
