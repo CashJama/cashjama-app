@@ -318,36 +318,44 @@ async def verify_otp(request: VerifyOTPRequest):
     mobile = request.mobile.strip()
     otp = request.otp.strip()
     
-    # Find OTP log
+    # DEV MODE: Accept fixed OTP bypass
+    is_dev_otp = DEV_MODE and otp == DEV_OTP
+    
+    if is_dev_otp:
+        logger.info(f"[DEV MODE] Using bypass OTP {DEV_OTP} for {mobile}")
+    
+    # Find OTP log (skip if using dev OTP)
     otp_log = await db.otp_logs.find_one({
         "mobile": mobile,
         "verified": False,
         "expires_at": {"$gt": datetime.utcnow()}
     })
     
-    if not otp_log:
+    if not otp_log and not is_dev_otp:
         raise HTTPException(status_code=400, detail="OTP expired or not found. Please request a new OTP.")
     
-    # Check attempts
-    if otp_log.get("attempts", 0) >= 3:
-        raise HTTPException(status_code=429, detail="Maximum verification attempts exceeded. Please request a new OTP.")
+    if otp_log and not is_dev_otp:
+        # Check attempts
+        if otp_log.get("attempts", 0) >= 3:
+            raise HTTPException(status_code=429, detail="Maximum verification attempts exceeded. Please request a new OTP.")
+        
+        # Update attempts
+        await db.otp_logs.update_one(
+            {"id": otp_log["id"]},
+            {"$inc": {"attempts": 1}}
+        )
+        
+        # Verify OTP
+        if otp_log["otp"] != otp:
+            remaining = 3 - (otp_log.get("attempts", 0) + 1)
+            raise HTTPException(status_code=400, detail=f"Invalid OTP. {remaining} attempts remaining.")
     
-    # Update attempts
-    await db.otp_logs.update_one(
-        {"id": otp_log["id"]},
-        {"$inc": {"attempts": 1}}
-    )
-    
-    # Verify OTP
-    if otp_log["otp"] != otp:
-        remaining = 3 - (otp_log.get("attempts", 0) + 1)
-        raise HTTPException(status_code=400, detail=f"Invalid OTP. {remaining} attempts remaining.")
-    
-    # Mark OTP as verified
-    await db.otp_logs.update_one(
-        {"id": otp_log["id"]},
-        {"$set": {"verified": True}}
-    )
+    # Mark OTP as verified (if exists)
+    if otp_log:
+        await db.otp_logs.update_one(
+            {"id": otp_log["id"]},
+            {"$set": {"verified": True}}
+        )
     
     # Find or create user
     user = await db.users.find_one({"mobile": mobile})
