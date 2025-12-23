@@ -75,6 +75,12 @@ export default function UserLayout() {
           href: null,
         }}
       />
+      <Tabs.Screen
+        name="faq"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
