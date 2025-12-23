@@ -13,8 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { api } from '@/src/services/api';
-import { useAuth } from '@/src/context/AuthContext';
+import { api } from '../../src/services/api';
+import { useAuth } from '../../src/context/AuthContext';
 
 export default function OTPScreen() {
   const router = useRouter();
@@ -41,7 +41,6 @@ export default function OTPScreen() {
 
   const handleOtpChange = (value: string, index: number) => {
     if (value.length > 1) {
-      // Handle paste
       const pastedOtp = value.slice(0, 6).split('');
       const newOtp = [...otp];
       pastedOtp.forEach((char, i) => {
@@ -59,7 +58,6 @@ export default function OTPScreen() {
     setOtp(newOtp);
     setError('');
 
-    // Auto-focus next input
     if (value && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
@@ -136,7 +134,6 @@ export default function OTPScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Back Button */}
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
@@ -144,7 +141,6 @@ export default function OTPScreen() {
             <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
           </TouchableOpacity>
 
-          {/* Header */}
           <View style={styles.header}>
             <View style={styles.iconContainer}>
               <Ionicons name="shield-checkmark" size={40} color="#4F46E5" />
@@ -156,7 +152,6 @@ export default function OTPScreen() {
             </Text>
           </View>
 
-          {/* OTP Input */}
           <View style={styles.otpContainer}>
             {otp.map((digit, index) => (
               <TextInput
@@ -178,7 +173,6 @@ export default function OTPScreen() {
             ))}
           </View>
 
-          {/* Error Message */}
           {error ? (
             <View style={styles.errorContainer}>
               <Ionicons name="alert-circle" size={16} color="#EF4444" />
@@ -186,7 +180,6 @@ export default function OTPScreen() {
             </View>
           ) : null}
 
-          {/* Timer and Resend */}
           <View style={styles.resendContainer}>
             {!canResend ? (
               <Text style={styles.timerText}>
@@ -207,7 +200,6 @@ export default function OTPScreen() {
             )}
           </View>
 
-          {/* Verify Button */}
           <TouchableOpacity
             style={[
               styles.verifyButton,
@@ -226,7 +218,6 @@ export default function OTPScreen() {
             )}
           </TouchableOpacity>
 
-          {/* Note */}
           <View style={styles.noteContainer}>
             <Ionicons name="time-outline" size={16} color="#6B7280" />
             <Text style={styles.noteText}>
