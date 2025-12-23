@@ -570,7 +570,7 @@ async def get_deposit_details(deposit_id: str, current_user: dict = Depends(get_
     if current_user["role"] == "user" and deposit.get("bc_agent_mobile"):
         deposit["bc_agent_mobile"] = mask_mobile(deposit["bc_agent_mobile"])
     
-    return deposit
+    return serialize_doc(deposit)
 
 @api_router.put("/deposits/{deposit_id}/cancel")
 async def cancel_deposit(deposit_id: str, reason: Optional[str] = None, current_user: dict = Depends(get_current_user)):
