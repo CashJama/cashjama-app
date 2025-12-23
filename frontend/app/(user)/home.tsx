@@ -13,6 +13,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
 import { api } from '../../src/services/api';
 
+const RUPEE = '₹';
+
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -78,9 +80,7 @@ export default function HomeScreen() {
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#4F46E5" />
-        }
+        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#4F46E5" />}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
@@ -110,11 +110,11 @@ export default function HomeScreen() {
             <View style={styles.activeCardContent}>
               <View>
                 <Text style={styles.activeCardLabel}>Deposit Amount</Text>
-                <Text style={styles.activeCardAmount}>\u20b9{activeDeposit.amount.toLocaleString()}</Text>
+                <Text style={styles.activeCardAmount}>{RUPEE}{activeDeposit.amount.toLocaleString()}</Text>
               </View>
               <View style={styles.activeCardRight}>
                 <Text style={styles.activeCardLabel}>Total Cash</Text>
-                <Text style={styles.activeCardTotal}>\u20b9{activeDeposit.total_cash.toLocaleString()}</Text>
+                <Text style={styles.activeCardTotal}>{RUPEE}{activeDeposit.total_cash.toLocaleString()}</Text>
               </View>
             </View>
             <Text style={styles.tapToTrack}>Tap to track your request</Text>
@@ -137,7 +137,7 @@ export default function HomeScreen() {
         <View style={styles.feeCard}>
           <Text style={styles.feeTitle}>Service Fee Structure</Text>
           <View style={styles.feeGrid}>
-            {[{ range: '\u20b9300 - \u20b9999', fee: '\u20b940' }, { range: '\u20b91000 - \u20b91999', fee: '\u20b950' }, { range: '\u20b92000 - \u20b94999', fee: '\u20b970' }, { range: '\u20b95000+', fee: '\u20b9100' }].map((item, idx) => (
+            {[{ range: `${RUPEE}300 - ${RUPEE}999`, fee: `${RUPEE}40` }, { range: `${RUPEE}1000 - ${RUPEE}1999`, fee: `${RUPEE}50` }, { range: `${RUPEE}2000 - ${RUPEE}4999`, fee: `${RUPEE}70` }, { range: `${RUPEE}5000+`, fee: `${RUPEE}100` }].map((item, idx) => (
               <View key={idx} style={styles.feeItem}>
                 <Text style={styles.feeRange}>{item.range}</Text>
                 <Text style={styles.feeAmount}>{item.fee}</Text>
@@ -149,7 +149,7 @@ export default function HomeScreen() {
         <View style={styles.howItWorks}>
           <Text style={styles.sectionTitle}>How It Works</Text>
           <View style={styles.stepsList}>
-            {[{ icon: 'create', title: 'Enter Amount', desc: 'Min \u20b9300 deposit' }, { icon: 'location', title: 'Set Location', desc: 'Your doorstep' }, { icon: 'person', title: 'Agent Arrives', desc: 'Verified BC agent' }, { icon: 'checkmark-circle', title: 'Cash Deposited', desc: 'Direct to your bank' }].map((step, index) => (
+            {[{ icon: 'create', title: 'Enter Amount', desc: `Min ${RUPEE}300 deposit` }, { icon: 'location', title: 'Set Location', desc: 'Your doorstep' }, { icon: 'person', title: 'Agent Arrives', desc: 'Verified BC agent' }, { icon: 'checkmark-circle', title: 'Cash Deposited', desc: 'Direct to your bank' }].map((step, index) => (
               <View key={index} style={styles.stepItem}>
                 <View style={styles.stepIconContainer}>
                   <Ionicons name={step.icon as any} size={20} color="#4F46E5" />
