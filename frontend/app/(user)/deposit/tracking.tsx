@@ -12,7 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { api } from '../../../src/services/api';
+import { api } from '@/src/services/api';
 import { format } from 'date-fns';
 
 interface DepositDetails {
