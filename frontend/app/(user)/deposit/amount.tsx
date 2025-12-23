@@ -15,6 +15,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../../src/services/api';
 
+const RUPEE = '₹';
+
 export default function AmountScreen() {
   const router = useRouter();
   const [amount, setAmount] = useState('');
@@ -55,7 +57,7 @@ export default function AmountScreen() {
   const handleContinue = () => {
     const numAmount = parseFloat(amount) || 0;
     if (numAmount < 300) {
-      setError('Minimum deposit amount is \u20b9300');
+      setError(`Minimum deposit amount is ${RUPEE}300`);
       return;
     }
     router.push({ pathname: '/(user)/deposit/location', params: { amount: numAmount.toString(), serviceFee: serviceFee.toString(), totalCash: totalCash.toString() } });
@@ -80,16 +82,16 @@ export default function AmountScreen() {
           <View style={styles.inputSection}>
             <Text style={styles.inputLabel}>Enter deposit amount</Text>
             <View style={styles.amountInputContainer}>
-              <Text style={styles.currencySymbol}>\u20b9</Text>
+              <Text style={styles.currencySymbol}>{RUPEE}</Text>
               <TextInput style={styles.amountInput} placeholder="0" placeholderTextColor="#6B7280" keyboardType="number-pad" value={amount} onChangeText={(text) => { setAmount(text.replace(/[^0-9]/g, '')); setError(''); }} maxLength={7} />
             </View>
-            <Text style={styles.minimumText}>Minimum amount: \u20b9300</Text>
+            <Text style={styles.minimumText}>Minimum amount: {RUPEE}300</Text>
           </View>
 
           <View style={styles.quickAmounts}>
             {quickAmounts.map((qa) => (
               <TouchableOpacity key={qa} style={[styles.quickAmountButton, amount === qa.toString() && styles.quickAmountActive]} onPress={() => setAmount(qa.toString())}>
-                <Text style={[styles.quickAmountText, amount === qa.toString() && styles.quickAmountTextActive]}>\u20b9{qa.toLocaleString()}</Text>
+                <Text style={[styles.quickAmountText, amount === qa.toString() && styles.quickAmountTextActive]}>{RUPEE}{qa.toLocaleString()}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -99,17 +101,17 @@ export default function AmountScreen() {
           {parseFloat(amount) >= 300 && (
             <View style={styles.feeBreakdown}>
               <Text style={styles.feeTitle}>Fee Breakdown</Text>
-              <View style={styles.feeRow}><Text style={styles.feeLabel}>Deposit Amount</Text><Text style={styles.feeValue}>\u20b9{parseFloat(amount).toLocaleString()}</Text></View>
-              <View style={styles.feeRow}><Text style={styles.feeLabel}>Service Fee</Text>{isCalculating ? <ActivityIndicator size="small" color="#4F46E5" /> : <Text style={styles.feeValue}>\u20b9{serviceFee}</Text>}</View>
+              <View style={styles.feeRow}><Text style={styles.feeLabel}>Deposit Amount</Text><Text style={styles.feeValue}>{RUPEE}{parseFloat(amount).toLocaleString()}</Text></View>
+              <View style={styles.feeRow}><Text style={styles.feeLabel}>Service Fee</Text>{isCalculating ? <ActivityIndicator size="small" color="#4F46E5" /> : <Text style={styles.feeValue}>{RUPEE}{serviceFee}</Text>}</View>
               <View style={styles.feeDivider} />
-              <View style={styles.feeRow}><Text style={styles.totalLabel}>Total Cash to Hand Over</Text><Text style={styles.totalValue}>\u20b9{totalCash.toLocaleString()}</Text></View>
+              <View style={styles.feeRow}><Text style={styles.totalLabel}>Total Cash to Hand Over</Text><Text style={styles.totalValue}>{RUPEE}{totalCash.toLocaleString()}</Text></View>
             </View>
           )}
 
           <View style={styles.feeSlabsCard}>
             <View style={styles.feeSlabsHeader}><Ionicons name="information-circle" size={20} color="#4F46E5" /><Text style={styles.feeSlabsTitle}>Service Fee Structure</Text></View>
             <View style={styles.feeSlabsList}>
-              {[{ range: '\u20b9300 - \u20b9999', fee: '\u20b940' }, { range: '\u20b91000 - \u20b91999', fee: '\u20b950' }, { range: '\u20b92000 - \u20b94999', fee: '\u20b970' }, { range: '\u20b95000+', fee: '\u20b9100' }].map((slab, i) => (
+              {[{ range: `${RUPEE}300 - ${RUPEE}999`, fee: `${RUPEE}40` }, { range: `${RUPEE}1000 - ${RUPEE}1999`, fee: `${RUPEE}50` }, { range: `${RUPEE}2000 - ${RUPEE}4999`, fee: `${RUPEE}70` }, { range: `${RUPEE}5000+`, fee: `${RUPEE}100` }].map((slab, i) => (
                 <View key={i} style={styles.feeSlabItem}><Text style={styles.feeSlabRange}>{slab.range}</Text><Text style={styles.feeSlabFee}>{slab.fee}</Text></View>
               ))}
             </View>
