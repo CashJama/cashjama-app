@@ -618,7 +618,7 @@ async def get_active_deposit(current_user: dict = Depends(get_current_user)):
     if deposit.get("bc_agent_mobile"):
         deposit["bc_agent_mobile"] = mask_mobile(deposit["bc_agent_mobile"])
     
-    return {"has_active": True, "deposit": deposit}
+    return {"has_active": True, "deposit": serialize_doc(deposit)}
 
 # ======================= HEALTH CHECK =======================
 
