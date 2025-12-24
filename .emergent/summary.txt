@@ -1,0 +1,207 @@
+<analysis>
+<original_problem_statement>
+**PRODUCT OVERVIEW: CashJama**
+CashJama is a mobile-first fintech operations platform for doorstep cash-to-bank deposit requests. It manages service requests, field agent (BC) assignment, OTP/GPS verification, and operational tracking. It does NOT store or transfer money, act as a wallet, or support digital payments.
+
+**ROLES:**
+-   **User:** Requests cash deposits.
+-   **BC Agent:** Fulfills deposit requests.
+-   **Admin:** Manages the platform via a web dashboard.
+
+**KEY FEATURES - USER APP:**
+-   **Authentication:** Mobile number + OTP login.
+-   **Deposit Request:**
+    -   Enter amount (min ₹300).
+    -   View calculated service fee (based on slabs).
+    -   Select location via GPS map.
+    -   Confirm details.
+-   **Tracking:** View assigned BC Agent, live location, and job status (Requested, Agent Assigned, In Progress, Completed).
+-   **Verification:** Job-specific OTP is shown to the user, which they must share with the BC Agent.
+-   **History:** View past requests.
+
+**KEY FEATURES - BC AGENT APP:**
+-   View and accept available jobs.
+-   Live GPS tracking during jobs.
+-   Enter user's OTP to verify and proceed.
+-   View earnings (service fees collected).
+
+**KEY FEATURES - ADMIN PANEL (WEB):**
+-   Manage users and BC agents.
+-   View all jobs and their statuses.
+-   Configure fee slabs and transaction limits.
+-   Generate reports.
+
+**TECH STACK:**
+-   **Backend:** FastAPI, MongoDB
+-   **Frontend:** Expo React Native (Android-first)
+-   **Integrations:** MSG91 (OTP), Google Maps SDK
+
+**USER REQUESTS DURING SESSION:**
+-   Implement with mock OTP and placeholder maps initially, as API keys are not yet available.
+-   Build a single mobile app with role-based navigation for User and BC Agent.
+-   Focus on the User Flow first, then BC Agent, then Admin Panel.
+-   Enable a DEV OTP bypass () for testing purposes.
+-   Fix a location permission error, an amount input field UI bug, and make the FAQ section functional.
+-   Add explanatory text about the authentication process.
+</original_problem_statement>
+
+**User's preferred language**: English
+
+**what currently exists?**
+A full-stack application with a FastAPI backend and an Expo React Native frontend. The core MVP for the **User Flow** has been implemented. This includes:
+-   User authentication via mobile number and OTP. A DEV OTP bypass () is active for testing.
+-   Backend APIs for user management, deposit requests, fee calculation, and retrieving deposit history.
+-   Frontend screens for Login, OTP verification, Home, Deposit Amount Entry, Location Selection, Confirmation, and a basic FAQ page.
+-   A tab-based navigation layout for the logged-in user section.
+
+**Last working item**:
+    - Last item agent was working: The agent was implementing a batch of fixes and improvements based on the user's latest feedback (message 150). This involved:
+        1.  **UI Bug Fix:** Fixing a white outline appearing on the amount input field during focus in .
+        2.  **Location Flow:** Adding a permission explainer screen and a manual address fallback for GPS in .
+        3.  **FAQ Section:** Adding static content to make the  screen functional.
+        4.  **Auth Clarification:** Adding text to the  screen to clarify that user verification is via OTP only.
+      The agent wrote the code for these fixes to four files using the  tool.
+    - Status: IN PROGRESS
+    - Agent Testing Done: N
+    - Which testing method agent to use? screenshot tool
+    - User Testing Done: N
+
+**All Pending/In progress Issue list**:
+  - Issue 1:  Verify fixes for UI bugs and flow improvements (P0)
+
+  Issues Detail:
+  - Issue 1: 
+     - **Description**: The agent has written code to address three user-reported issues: a UI glitch on the amount input field, a lack of a permission explainer for location services, and an inactive FAQ section. These changes have been written to the files but have not been tested or verified.
+     - **Attempted fixes**: The agent overwrote four files: , , , and  with the intended fixes.
+     - **Next debug checklist**:
+        1. Restart the expo server using expo: ERROR (not running)
+expo: ERROR (abnormal termination) to apply the new code.
+        2. Use the  to navigate to the deposit amount screen () and verify that the white outline on the input field is gone.
+        3. Navigate to the location selection screen () and confirm the permission explainer appears. Test the manual fallback if possible.
+        4. Navigate to the FAQ tab and verify the static content is now displayed.
+     - **Why fix this issue and what will be achieved with the fix?**: To resolve the blocking bugs reported by the user and make the current user flow stable and testable, as per their explicit instructions.
+     - **Status**:  IN PROGRESS
+     - **Is recurring issue?** N
+     - **Should Test frontend/backend/both after fix?** Frontend
+     - **Blocked on other issue**: None
+
+**In progress Task List**:
+  None
+
+**Upcoming and Future Tasks**
+    Upcoming Tasks:
+    - **P0: BC Agent App Flow**:
+      - Implement the BC Agent dashboard to view available and assigned jobs.
+      - Build the job execution flow (accepting jobs, live tracking, OTP entry, status updates).
+      - Create the view-only earnings screen.
+      - This is the next major phase after the user flow is verified and stable.
+    - **P1: Admin Panel (Web)**:
+      - Develop the web-based dashboard for administrators.
+      - Implement controls to view/manage users, BC agents, and jobs.
+      - Create functionality to configure fee slabs and transaction limits.
+      - Build the reporting dashboard.
+
+    Future Tasks:
+    - **P2: Real OTP Integration**: Replace the mock/dev OTP logic with a real MSG91 integration once the user provides the API key.
+    - **P2: Real Maps Integration**: Replace the placeholder map rendering with the full Google Maps SDK integration once the user provides the API key.
+
+**Completed work in this session**
+- **User Authentication Flow**: Implemented mobile number + OTP login.
+- **DEV OTP Bypass**: Created a bypass allowing login with any mobile number and the static OTP .
+- **User Deposit Request Flow**: Built the multi-step process for creating a deposit request (amount, fee calc, location, confirmation).
+- **User Home Screen**: Created a dashboard for the user to see active deposits and initiate new ones.
+- **Backend API Development**: Established all necessary FastAPI endpoints for the user flow, including user creation, login, fee calculation, and deposit CRUD operations.
+- **Backend Bug Fix**: Resolved a critical server error by implementing a helper function () to correctly handle MongoDB  serialization in API responses.
+- **Frontend UI Bug Fix**: Corrected an issue where the Rupee symbol (₹) was displaying as its Unicode escape sequence ().
+
+**Earlier issues found/mentioned but not fixed**
+None. All previously mentioned issues were either resolved or are part of the current .
+
+**Known issue recurrence from previous fork**
+  - No previous fork summary was provided.
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+-   **Full-Stack Monorepo**: Frontend and Backend code are in the same repository.
+-   **Expo Router**: File-system-based routing is used for the React Native app.
+-   **FastAPI**: The backend is built with FastAPI, providing asynchronous API endpoints.
+-   **MongoDB**:  async driver is used to interact with MongoDB.
+-   **JWT Authentication**: Session management is handled via JSON Web Tokens.
+-   **Mocking for Development**: A DEV OTP bypass () was implemented in the backend to facilitate frontend testing without a real OTP service.
+-   **Path Alias Debugging**: The agent initially used  path aliases () but switched to relative paths () due to resolver issues with the Metro bundler.
+
+**key DB schema**
+  - **users**: 
+  - **otps**: 
+  - **deposits**: 
+
+**changes in tech stack**
+  - No changes to the core tech stack.
+
+**All files of reference**
+*   : Contains all backend logic, including the new DEV OTP bypass.
+*   : User-facing screen for entering the deposit amount. Recently updated to fix a UI bug.
+*   : Screen for location selection. Recently updated to add a permission explainer.
+*   : New screen for FAQ content.
+*   : Login screen, recently updated with explanatory text.
+*   : Manages user authentication state globally.
+*   : Defines the tab navigation for the main user section.
+
+**Areas that need refactoring**:
+- The agent used  with  multiple times on the same files (, ). This is functional but could be replaced by more precise  calls in the future to avoid accidentally removing other code.
+
+**key api endpoints**
+-   : Sends an OTP to a mobile number.
+-   : Verifies an OTP and returns a JWT token. Accepts dev bypass OTP .
+-   : Calculates service fee for a given amount.
+-   : Creates a new deposit request.
+-   : Lists all deposits for the current user.
+-   : Gets the user's current active deposit.
+
+**Critical Info for New Agent**
+-   **DEV OTP is ACTIVE**: You can log in using **any 10-digit mobile number** and the OTP ****. This was requested by the user for testing.
+-   **Focus on Stability First**: The user's last instruction (message 150) was to **only fix blocking bugs** and stabilize the current user flow. Do not add new features, polish, or move on to the BC Agent flow until the current set of fixes is verified and the user confirms.
+-   **API Keys are Unavailable**: Do not attempt to use real MSG91 or Google Maps APIs. Continue with the mock/placeholder implementations.
+-   **Relative Paths for Imports**: Do not use  path aliases (). They did not work with the Metro bundler. Use relative paths (, ) for all imports within the  directory.
+
+**documents created in this job**
+  None.
+
+**Last 10 User Messages and any pending user messages**
+- **User (Msg 124)**: Can't receive OTP (expected). Requested a DEV OTP bypass (e.g., fixed OTP ) to test app flows. (Status: **COMPLETED**)
+- **User (Msg 141)**: Reported location error. Requested a permission explainer, manual address fallback, a fix for an input field UI bug (white outline), and static content for the FAQ section. (Status: **SUPERSEDED by Msg 150, but implemented**)
+- **User (Msg 150)**: Provided a strict, focused task list.
+  - **Fix blocking bugs**: Location permission and amount input UI bug.
+  - **Auth clarification**: Add text explaining OTP-only verification.
+  - **Fix FAQ**: Make it clickable with placeholder content.
+  - **Explicitly stated**: DO NOT add polish, new flows, or admin features.
+  (Status: **IN PROGRESS** - Agent has written code for these fixes, but it is not yet tested or verified).
+
+**Project Health Check:**
+- **Broken**: Nothing is definitively broken, but the latest fixes for the UI bug and location flow are unverified.
+- **Mocked**:
+  - OTP Generation/Verification (uses a  bypass).
+  - Location Services (uses  with placeholder map rendering, not Google Maps SDK).
+
+**3rd Party Integrations**
+-   MSG91 (OTP) - Not yet integrated, logic is mocked.
+-   Google Maps SDK (Maps) - Not yet integrated, using  as a placeholder.
+
+**Testing status**
+  - Testing agent used after significant changes: NO
+  - Troubleshoot agent used after agent stuck in loop: NO
+  - Test files created: []
+  - Known regressions: None.
+
+**Credentials to test flow:**
+-   **Mobile Number**: Any 10-digit number (e.g., )
+-   **OTP**: 
+
+**What agent forgot to execute**
+- The agent wrote the code to fix the issues from user message 150 but did not restart the expo server (expo: ERROR (not running)
+expo: started) to apply the changes.
+- The agent has not yet verified that the fixes it implemented actually work. The next logical step is to restart the server and use the  to check the affected screens.
+
+</analysis>
