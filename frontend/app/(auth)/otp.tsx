@@ -85,7 +85,12 @@ export default function OTPScreen() {
       
       if (response.success && response.token && response.user) {
         await login(response.token, response.user);
-        router.replace('/(user)/home');
+        // Route based on user role
+        if (response.user.role === 'bc_agent') {
+          router.replace('/(bc)/home');
+        } else {
+          router.replace('/(user)/home');
+        }
       } else {
         setError('Verification failed. Please try again.');
       }
