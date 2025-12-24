@@ -632,6 +632,347 @@ async def get_active_deposit(current_user: dict = Depends(get_current_user)):
     
     return {"has_active": True, "deposit": serialize_doc(deposit)}
 
+# ======================= BC AGENT ENDPOINTS =======================
+
+# BC Agent Location Model
+class BCLocationUpdate(BaseModel):
+    latitude: float
+    longitude: float
+    accuracy: Optional[float] = None
+
+class JobOTPVerify(BaseModel):
+    otp: str
+
+async def require_bc_agent(current_user: dict = Depends(get_current_user)):
+    """Dependency to require BC agent role"""
+    if current_user.get("role") != "bc_agent":
+        raise HTTPException(status_code=403, detail="BC agent access required")
+    return current_user
+
+@api_router.get("/bc/jobs/available")
+async def get_available_jobs(current_user: dict = Depends(require_bc_agent)):
+    """Get all available jobs for BC agents (status: requested)"""
+    jobs = await db.deposits.find({
+        "status": "requested"
+    }).sort("created_at", 1).to_list(50)
+    
+    # Add distance info if BC has location
+    bc_location = await db.bc_locations.find_one({"bc_agent_id": current_user["id"]})
+    
+    serialized_jobs = []
+    for job in jobs:
+        job_data = serialize_doc(job)
+        # In production, calculate actual distance from BC location
+        job_data["estimated_distance"] = "~2-5 km"  # Placeholder
+        serialized_jobs.append(job_data)
+    
+    return {
+        "jobs": serialized_jobs,
+        "count": len(serialized_jobs)
+    }
+
+@api_router.get("/bc/jobs/assigned")
+async def get_assigned_jobs(current_user: dict = Depends(require_bc_agent)):
+    """Get jobs assigned to current BC agent"""
+    jobs = await db.deposits.find({
+        "bc_agent_id": current_user["id"],
+        "status": {"$in": ["agent_assigned", "in_progress"]}
+    }).sort("assigned_at", -1).to_list(20)
+    
+    return {
+        "jobs": [serialize_doc(job) for job in jobs],
+        "count": len(jobs)
+    }
+
+@api_router.get("/bc/jobs/history")
+async def get_bc_job_history(current_user: dict = Depends(require_bc_agent)):
+    """Get completed job history for BC agent"""
+    jobs = await db.deposits.find({
+        "bc_agent_id": current_user["id"],
+        "status": {"$in": ["completed", "cancelled"]}
+    }).sort("completed_at", -1).to_list(50)
+    
+    return {
+        "jobs": [serialize_doc(job) for job in jobs],
+        "count": len(jobs)
+    }
+
+@api_router.post("/bc/jobs/{deposit_id}/accept")
+async def accept_job(deposit_id: str, current_user: dict = Depends(require_bc_agent)):
+    """Accept a job and get assigned to it"""
+    deposit = await db.deposits.find_one({"id": deposit_id})
+    
+    if not deposit:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    if deposit["status"] != "requested":
+        raise HTTPException(status_code=400, detail="Job is no longer available")
+    
+    # Check if BC already has an active job
+    existing_job = await db.deposits.find_one({
+        "bc_agent_id": current_user["id"],
+        "status": {"$in": ["agent_assigned", "in_progress"]}
+    })
+    
+    if existing_job:
+        raise HTTPException(status_code=400, detail="You already have an active job. Complete it first.")
+    
+    # Generate job OTP (4 digits for simplicity)
+    job_otp = ''.join(random.choices(string.digits, k=4))
+    
+    # Assign job to BC agent
+    await db.deposits.update_one(
+        {"id": deposit_id},
+        {
+            "$set": {
+                "status": "agent_assigned",
+                "bc_agent_id": current_user["id"],
+                "bc_agent_name": current_user.get("name", "BC Agent"),
+                "bc_agent_mobile": current_user["mobile"],
+                "job_otp": job_otp,
+                "assigned_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            }
+        }
+    )
+    
+    logger.info(f"Job {deposit_id} assigned to BC {current_user['id']}, OTP: {job_otp}")
+    
+    return {
+        "success": True,
+        "message": "Job accepted successfully",
+        "job_otp": job_otp,  # BC will share this with user for verification
+        "user_location": deposit["location"]
+    }
+
+@api_router.post("/bc/jobs/{deposit_id}/reject")
+async def reject_job(deposit_id: str, current_user: dict = Depends(require_bc_agent)):
+    """Reject/release a job (only if assigned to this BC and not started)"""
+    deposit = await db.deposits.find_one({"id": deposit_id})
+    
+    if not deposit:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    if deposit.get("bc_agent_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="This job is not assigned to you")
+    
+    if deposit["status"] == "in_progress":
+        raise HTTPException(status_code=400, detail="Cannot reject a job that is in progress")
+    
+    # Release the job back to pool
+    await db.deposits.update_one(
+        {"id": deposit_id},
+        {
+            "$set": {
+                "status": "requested",
+                "bc_agent_id": None,
+                "bc_agent_name": None,
+                "bc_agent_mobile": None,
+                "job_otp": None,
+                "assigned_at": None,
+                "updated_at": datetime.utcnow()
+            }
+        }
+    )
+    
+    return {
+        "success": True,
+        "message": "Job released back to pool"
+    }
+
+@api_router.post("/bc/jobs/{deposit_id}/verify-otp")
+async def verify_job_otp(deposit_id: str, request: JobOTPVerify, current_user: dict = Depends(require_bc_agent)):
+    """Verify OTP from user to start the job"""
+    deposit = await db.deposits.find_one({"id": deposit_id})
+    
+    if not deposit:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    if deposit.get("bc_agent_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="This job is not assigned to you")
+    
+    if deposit["status"] != "agent_assigned":
+        raise HTTPException(status_code=400, detail="Job is not in correct state for OTP verification")
+    
+    # DEV MODE: Accept fixed OTP bypass
+    is_dev_otp = DEV_MODE and request.otp == DEV_OTP[:4]  # Use first 4 digits of dev OTP
+    
+    if not is_dev_otp and deposit.get("job_otp") != request.otp:
+        raise HTTPException(status_code=400, detail="Invalid OTP")
+    
+    # Mark OTP as verified and start job
+    await db.deposits.update_one(
+        {"id": deposit_id},
+        {
+            "$set": {
+                "status": "in_progress",
+                "job_otp_verified": True,
+                "started_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            }
+        }
+    )
+    
+    logger.info(f"Job {deposit_id} OTP verified, job started")
+    
+    return {
+        "success": True,
+        "message": "OTP verified. Job started.",
+        "status": "in_progress"
+    }
+
+@api_router.post("/bc/jobs/{deposit_id}/complete")
+async def complete_job(deposit_id: str, current_user: dict = Depends(require_bc_agent)):
+    """Mark a job as completed"""
+    deposit = await db.deposits.find_one({"id": deposit_id})
+    
+    if not deposit:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    if deposit.get("bc_agent_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="This job is not assigned to you")
+    
+    if deposit["status"] != "in_progress":
+        raise HTTPException(status_code=400, detail="Job must be in progress to complete")
+    
+    # Complete the job
+    await db.deposits.update_one(
+        {"id": deposit_id},
+        {
+            "$set": {
+                "status": "completed",
+                "completed_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            }
+        }
+    )
+    
+    logger.info(f"Job {deposit_id} completed by BC {current_user['id']}")
+    
+    return {
+        "success": True,
+        "message": "Job completed successfully",
+        "earnings": deposit["service_fee"]
+    }
+
+@api_router.put("/bc/location")
+async def update_bc_location(location: BCLocationUpdate, current_user: dict = Depends(require_bc_agent)):
+    """Update BC agent's current GPS location"""
+    await db.bc_locations.update_one(
+        {"bc_agent_id": current_user["id"]},
+        {
+            "$set": {
+                "bc_agent_id": current_user["id"],
+                "latitude": location.latitude,
+                "longitude": location.longitude,
+                "accuracy": location.accuracy,
+                "updated_at": datetime.utcnow()
+            }
+        },
+        upsert=True
+    )
+    
+    return {
+        "success": True,
+        "message": "Location updated"
+    }
+
+@api_router.get("/bc/location/{bc_agent_id}")
+async def get_bc_location(bc_agent_id: str, current_user: dict = Depends(get_current_user)):
+    """Get BC agent's current location (for users tracking their assigned agent)"""
+    # Verify user has a deposit with this BC agent
+    if current_user.get("role") == "user":
+        deposit = await db.deposits.find_one({
+            "user_id": current_user["id"],
+            "bc_agent_id": bc_agent_id,
+            "status": {"$in": ["agent_assigned", "in_progress"]}
+        })
+        if not deposit:
+            raise HTTPException(status_code=403, detail="Access denied")
+    
+    bc_location = await db.bc_locations.find_one({"bc_agent_id": bc_agent_id})
+    
+    if not bc_location:
+        return {"has_location": False, "location": None}
+    
+    return {
+        "has_location": True,
+        "location": {
+            "latitude": bc_location["latitude"],
+            "longitude": bc_location["longitude"],
+            "updated_at": bc_location.get("updated_at")
+        }
+    }
+
+@api_router.get("/bc/earnings")
+async def get_bc_earnings(current_user: dict = Depends(require_bc_agent)):
+    """Get BC agent's earnings summary"""
+    # Get completed jobs
+    completed_jobs = await db.deposits.find({
+        "bc_agent_id": current_user["id"],
+        "status": "completed"
+    }).to_list(1000)
+    
+    total_earnings = sum(job.get("service_fee", 0) for job in completed_jobs)
+    total_jobs = len(completed_jobs)
+    
+    # Today's earnings
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_jobs = [j for j in completed_jobs if j.get("completed_at") and j["completed_at"] >= today_start]
+    today_earnings = sum(job.get("service_fee", 0) for job in today_jobs)
+    
+    return {
+        "total_earnings": total_earnings,
+        "total_jobs": total_jobs,
+        "today_earnings": today_earnings,
+        "today_jobs": len(today_jobs)
+    }
+
+@api_router.get("/bc/job/{deposit_id}")
+async def get_bc_job_details(deposit_id: str, current_user: dict = Depends(require_bc_agent)):
+    """Get specific job details for BC agent"""
+    deposit = await db.deposits.find_one({"id": deposit_id})
+    
+    if not deposit:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    # BC can only see jobs that are available or assigned to them
+    if deposit["status"] != "requested" and deposit.get("bc_agent_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    return serialize_doc(deposit)
+
+# ======================= ADMIN: CREATE BC AGENT =======================
+
+@api_router.post("/admin/create-bc-agent")
+async def create_bc_agent(mobile: str, name: str = "BC Agent"):
+    """Create a BC agent account (for testing/pilot)"""
+    # Check if user exists
+    existing = await db.users.find_one({"mobile": mobile})
+    
+    if existing:
+        # Update role to bc_agent
+        await db.users.update_one(
+            {"mobile": mobile},
+            {"$set": {"role": "bc_agent", "name": name, "updated_at": datetime.utcnow()}}
+        )
+        return {"success": True, "message": "User upgraded to BC agent"}
+    
+    # Create new BC agent
+    bc_agent = User(
+        mobile=mobile,
+        name=name,
+        role="bc_agent",
+        is_verified=True
+    )
+    await db.users.insert_one(bc_agent.dict())
+    
+    return {
+        "success": True,
+        "message": "BC agent created",
+        "user_id": bc_agent.id
+    }
+
 # ======================= HEALTH CHECK =======================
 
 @api_router.get("/")
