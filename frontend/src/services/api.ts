@@ -117,6 +117,62 @@ class ApiService {
     return response.data;
   }
 
+  // BC Agent endpoints
+  async getAvailableJobs() {
+    const response = await this.instance.get('/bc/jobs/available');
+    return response.data;
+  }
+
+  async getAssignedJobs() {
+    const response = await this.instance.get('/bc/jobs/assigned');
+    return response.data;
+  }
+
+  async getBCJobHistory() {
+    const response = await this.instance.get('/bc/jobs/history');
+    return response.data;
+  }
+
+  async acceptJob(depositId: string) {
+    const response = await this.instance.post(`/bc/jobs/${depositId}/accept`);
+    return response.data;
+  }
+
+  async rejectJob(depositId: string) {
+    const response = await this.instance.post(`/bc/jobs/${depositId}/reject`);
+    return response.data;
+  }
+
+  async verifyJobOTP(depositId: string, otp: string) {
+    const response = await this.instance.post(`/bc/jobs/${depositId}/verify-otp`, { otp });
+    return response.data;
+  }
+
+  async completeJob(depositId: string) {
+    const response = await this.instance.post(`/bc/jobs/${depositId}/complete`);
+    return response.data;
+  }
+
+  async updateBCLocation(latitude: number, longitude: number, accuracy?: number) {
+    const response = await this.instance.put('/bc/location', { latitude, longitude, accuracy });
+    return response.data;
+  }
+
+  async getBCLocation(bcAgentId: string) {
+    const response = await this.instance.get(`/bc/location/${bcAgentId}`);
+    return response.data;
+  }
+
+  async getBCEarnings() {
+    const response = await this.instance.get('/bc/earnings');
+    return response.data;
+  }
+
+  async getBCJobDetails(depositId: string) {
+    const response = await this.instance.get(`/bc/job/${depositId}`);
+    return response.data;
+  }
+
   // Health check
   async healthCheck() {
     const response = await this.instance.get('/health');
