@@ -129,6 +129,14 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* Verification Info */}
+          <View style={styles.verificationInfo}>
+            <Ionicons name="finger-print" size={20} color="#4F46E5" />
+            <Text style={styles.verificationText}>
+              Users are verified via OTP. Aadhaar & fingerprint are handled by BC at bank device.
+            </Text>
+          </View>
+
           {/* Disclaimer */}
           <View style={styles.disclaimer}>
             <Ionicons name="information-circle-outline" size={20} color="#6B7280" />
@@ -158,7 +166,7 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 40,
   },
   logoContainer: {
     width: 80,
@@ -183,7 +191,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#111827',
     borderRadius: 16,
     padding: 24,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   formTitle: {
     fontSize: 24,
@@ -255,18 +263,31 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
+  verificationInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+  },
+  verificationText: {
+    fontSize: 13,
+    color: '#A5B4FC',
+    marginLeft: 10,
+    flex: 1,
+  },
   disclaimer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     backgroundColor: 'rgba(107, 114, 128, 0.1)',
     borderRadius: 12,
-    padding: 16,
-    marginTop: 'auto',
+    padding: 14,
   },
   disclaimerText: {
     fontSize: 12,
     color: '#9CA3AF',
-    marginLeft: 12,
+    marginLeft: 10,
     flex: 1,
     lineHeight: 18,
   },

@@ -6,25 +6,6 @@ import { Ionicons } from '@expo/vector-icons';
 
 const RUPEE = '₹';
 
-interface FAQItemProps {
-  question: string;
-  answer: string;
-  icon: string;
-  iconColor: string;
-}
-
-const FAQItem: React.FC<FAQItemProps> = ({ question, answer, icon, iconColor }) => (
-  <View style={styles.faqItem}>
-    <View style={styles.faqHeader}>
-      <View style={[styles.faqIcon, { backgroundColor: `${iconColor}15` }]}>
-        <Ionicons name={icon as any} size={20} color={iconColor} />
-      </View>
-      <Text style={styles.faqQuestion}>{question}</Text>
-    </View>
-    <Text style={styles.faqAnswer}>{answer}</Text>
-  </View>
-);
-
 export default function FAQScreen() {
   const router = useRouter();
 
@@ -41,129 +22,82 @@ export default function FAQScreen() {
         
         {/* What CashJama Does */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="checkmark-circle" size={24} color="#10B981" />
-            <Text style={styles.sectionTitle}>What CashJama Does</Text>
+          <Text style={styles.sectionTitle}>What CashJama Does</Text>
+          
+          <View style={styles.faqItem}>
+            <Text style={styles.faqQuestion}>What is CashJama?</Text>
+            <Text style={styles.faqAnswer}>CashJama is a doorstep cash deposit service. We connect you with authorized Business Correspondents (BC agents) who come to your location, collect cash, and deposit it directly into your bank account.</Text>
           </View>
           
-          <FAQItem
-            icon="cash"
-            iconColor="#10B981"
-            question="What is CashJama?"
-            answer="CashJama is a doorstep cash deposit service. We connect you with authorized Business Correspondents (BC agents) who come to your location, collect cash, and deposit it directly into your bank account."
-          />
+          <View style={styles.faqItem}>
+            <Text style={styles.faqQuestion}>How does it work?</Text>
+            <Text style={styles.faqAnswer}>{`1. Enter the amount (min ${RUPEE}300)\n2. Set your pickup location\n3. A verified BC agent is assigned\n4. Agent arrives, collects cash & OTP\n5. Cash is deposited to your bank`}</Text>
+          </View>
           
-          <FAQItem
-            icon="home"
-            iconColor="#10B981"
-            question="How does doorstep deposit work?"
-            answer={`1. Enter the amount you want to deposit (minimum ${RUPEE}300)\n2. Set your pickup location\n3. A verified BC agent is assigned\n4. Agent arrives, collects cash & OTP\n5. Cash is deposited to your bank`}
-          />
-          
-          <FAQItem
-            icon="pricetag"
-            iconColor="#10B981"
-            question="What are the service fees?"
-            answer={`Flat fee structure:\n• ${RUPEE}300 - ${RUPEE}999: ${RUPEE}40\n• ${RUPEE}1000 - ${RUPEE}1999: ${RUPEE}50\n• ${RUPEE}2000 - ${RUPEE}4999: ${RUPEE}70\n• ${RUPEE}5000+: ${RUPEE}100\n\nFees are paid in cash along with your deposit amount.`}
-          />
-          
-          <FAQItem
-            icon="person"
-            iconColor="#10B981"
-            question="Who are BC agents?"
-            answer="Business Correspondents (BCs) are banking agents authorized by RBI and banks to provide basic banking services. All our BC agents are verified, trained, and carry valid identification."
-          />
+          <View style={styles.faqItem}>
+            <Text style={styles.faqQuestion}>What are the service fees?</Text>
+            <Text style={styles.faqAnswer}>{`${RUPEE}300 - ${RUPEE}999: ${RUPEE}40\n${RUPEE}1000 - ${RUPEE}1999: ${RUPEE}50\n${RUPEE}2000 - ${RUPEE}4999: ${RUPEE}70\n${RUPEE}5000+: ${RUPEE}100`}</Text>
+          </View>
         </View>
 
         {/* What CashJama Does NOT Do */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="close-circle" size={24} color="#EF4444" />
-            <Text style={styles.sectionTitle}>What CashJama Does NOT Do</Text>
+          <Text style={styles.sectionTitleRed}>What CashJama Does NOT Do</Text>
+          
+          <View style={styles.faqItem}>
+            <Text style={styles.faqQuestion}>Does CashJama hold my money?</Text>
+            <Text style={styles.faqAnswer}>NO. CashJama is NOT a wallet or payment app. We do not store, hold, or manage your funds. Cash goes directly to your bank via BC agents.</Text>
           </View>
           
-          <FAQItem
-            icon="wallet"
-            iconColor="#EF4444"
-            question="Does CashJama hold my money?"
-            answer="NO. CashJama is NOT a wallet or payment app. We do not store, hold, or manage your funds in any way. Cash collected by BC agents goes directly to your bank - not to CashJama."
-          />
-          
-          <FAQItem
-            icon="swap-horizontal"
-            iconColor="#EF4444"
-            question="Can I transfer money through CashJama?"
-            answer="NO. CashJama does not support money transfers, UPI payments, or any digital transactions. We only facilitate cash deposits through BC agents."
-          />
-          
-          <FAQItem
-            icon="card"
-            iconColor="#EF4444"
-            question="Is CashJama a bank or payment gateway?"
-            answer="NO. CashJama is a service platform that connects you with banking agents. We are not a bank, NBFC, wallet, or payment processor. All deposits are handled by authorized banking channels."
-          />
+          <View style={styles.faqItem}>
+            <Text style={styles.faqQuestion}>Can I transfer money through CashJama?</Text>
+            <Text style={styles.faqAnswer}>NO. CashJama does not support money transfers, UPI payments, or digital transactions. We only facilitate cash deposits through BC agents.</Text>
+          </View>
         </View>
 
-        {/* Safety & Security */}
+        {/* User Verification */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Ionicons name="shield-checkmark" size={24} color="#4F46E5" />
-            <Text style={styles.sectionTitle}>Safety & Security</Text>
+          <Text style={styles.sectionTitle}>User Verification</Text>
+          
+          <View style={styles.faqItem}>
+            <Text style={styles.faqQuestion}>How are users verified?</Text>
+            <Text style={styles.faqAnswer}>Users are verified via mobile number + OTP only. No Aadhaar or fingerprint is required from users in the app.</Text>
           </View>
           
-          <FAQItem
-            icon="key"
-            iconColor="#4F46E5"
-            question="What is the OTP for?"
-            answer="A unique OTP is generated for each deposit request. This OTP verifies that the correct BC agent is servicing your request. Never share this OTP with anyone except the assigned agent at your doorstep."
-          />
-          
-          <FAQItem
-            icon="location"
-            iconColor="#4F46E5"
-            question="Why is location required?"
-            answer="We need your location to assign the nearest available BC agent. Location helps agents navigate to you and ensures faster service. Your location data is used only for agent assignment."
-          />
-          
-          <FAQItem
-            icon="document-text"
-            iconColor="#4F46E5"
-            question="Will I get a receipt?"
-            answer="Yes, you will receive a service receipt in the app. Note: This is a CashJama service receipt, NOT a bank receipt. Your bank deposit confirmation will come from your bank directly."
-          />
-          
-          <FAQItem
-            icon="alert-circle"
-            iconColor="#4F46E5"
-            question="What if the agent doesn't arrive?"
-            answer="You can cancel your request anytime before the agent arrives. If there are delays, you can track the agent's status in the app or contact support. You will not be charged for cancelled requests."
-          />
-        </View>
-
-        {/* Disclaimers */}
-        <View style={styles.disclaimerSection}>
-          <View style={styles.disclaimerHeader}>
-            <Ionicons name="information-circle" size={22} color="#F59E0B" />
-            <Text style={styles.disclaimerTitle}>Important Disclaimers</Text>
-          </View>
-          <View style={styles.disclaimerList}>
-            <Text style={styles.disclaimerItem}>• CashJama does NOT hold, store, or manage user funds</Text>
-            <Text style={styles.disclaimerItem}>• We are NOT a bank, wallet, or payment gateway</Text>
-            <Text style={styles.disclaimerItem}>• Service fees are for operational costs only</Text>
-            <Text style={styles.disclaimerItem}>• All deposits are processed by authorized BC agents</Text>
-            <Text style={styles.disclaimerItem}>• Bank deposit confirmations come from your bank</Text>
-            <Text style={styles.disclaimerItem}>• Users must verify agent identity before handing over cash</Text>
+          <View style={styles.faqItem}>
+            <Text style={styles.faqQuestion}>What about Aadhaar/biometric verification?</Text>
+            <Text style={styles.faqAnswer}>Aadhaar and fingerprint verification are handled by BC agents at the bank's micro-ATM device - this happens outside the CashJama app during the actual banking transaction.</Text>
           </View>
         </View>
 
-        {/* Contact Support */}
-        <View style={styles.supportSection}>
-          <Text style={styles.supportTitle}>Need more help?</Text>
-          <Text style={styles.supportText}>Contact our support team for any questions or issues.</Text>
-          <TouchableOpacity style={styles.supportButton}>
-            <Ionicons name="chatbubble" size={20} color="#FFFFFF" />
-            <Text style={styles.supportButtonText}>Contact Support</Text>
-          </TouchableOpacity>
+        {/* Verification Clarification Box */}
+        <View style={styles.clarificationBox}>
+          <Ionicons name="finger-print" size={24} color="#4F46E5" />
+          <View style={styles.clarificationContent}>
+            <Text style={styles.clarificationTitle}>Verification Process</Text>
+            <Text style={styles.clarificationText}>Users are verified via OTP only. Aadhaar & fingerprint verification are handled by BC agent at bank device - not in this app.</Text>
+          </View>
+        </View>
+
+        {/* Safety */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Safety & Security</Text>
+          
+          <View style={styles.faqItem}>
+            <Text style={styles.faqQuestion}>What is the OTP for?</Text>
+            <Text style={styles.faqAnswer}>A unique OTP is generated for each request. Share this OTP only with the assigned BC agent at your doorstep to verify the transaction.</Text>
+          </View>
+          
+          <View style={styles.faqItem}>
+            <Text style={styles.faqQuestion}>Why is location required?</Text>
+            <Text style={styles.faqAnswer}>Location helps us assign the nearest BC agent and helps them navigate to you.</Text>
+          </View>
+        </View>
+
+        {/* Disclaimer */}
+        <View style={styles.disclaimer}>
+          <Ionicons name="alert-circle" size={20} color="#F59E0B" />
+          <Text style={styles.disclaimerText}>CashJama does NOT hold, store, or manage user funds. We are NOT a bank, wallet, or payment gateway. All deposits are processed by authorized BC agents.</Text>
         </View>
 
       </ScrollView>
@@ -178,26 +112,16 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 20, fontWeight: '700', color: '#FFFFFF' },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
-  
   section: { marginBottom: 24 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#FFFFFF', marginLeft: 10 },
-  
-  faqItem: { backgroundColor: '#111827', borderRadius: 14, padding: 16, marginBottom: 12 },
-  faqHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  faqIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: 12 },
-  faqQuestion: { flex: 1, fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#10B981', marginBottom: 12 },
+  sectionTitleRed: { fontSize: 18, fontWeight: '700', color: '#EF4444', marginBottom: 12 },
+  faqItem: { backgroundColor: '#111827', borderRadius: 12, padding: 16, marginBottom: 10 },
+  faqQuestion: { fontSize: 15, fontWeight: '600', color: '#FFFFFF', marginBottom: 8 },
   faqAnswer: { fontSize: 14, color: '#9CA3AF', lineHeight: 22 },
-  
-  disclaimerSection: { backgroundColor: 'rgba(245, 158, 11, 0.1)', borderRadius: 16, padding: 16, marginBottom: 24, borderWidth: 1, borderColor: 'rgba(245, 158, 11, 0.2)' },
-  disclaimerHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  disclaimerTitle: { fontSize: 16, fontWeight: '600', color: '#F59E0B', marginLeft: 8 },
-  disclaimerList: { gap: 8 },
-  disclaimerItem: { fontSize: 13, color: '#E5E7EB', lineHeight: 20 },
-  
-  supportSection: { backgroundColor: '#111827', borderRadius: 16, padding: 20, alignItems: 'center' },
-  supportTitle: { fontSize: 16, fontWeight: '600', color: '#FFFFFF', marginBottom: 8 },
-  supportText: { fontSize: 14, color: '#9CA3AF', textAlign: 'center', marginBottom: 16 },
-  supportButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#4F46E5', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 24, gap: 8 },
-  supportButtonText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
+  clarificationBox: { flexDirection: 'row', backgroundColor: 'rgba(79, 70, 229, 0.1)', borderRadius: 12, padding: 16, marginBottom: 24, borderWidth: 1, borderColor: 'rgba(79, 70, 229, 0.3)' },
+  clarificationContent: { flex: 1, marginLeft: 12 },
+  clarificationTitle: { fontSize: 15, fontWeight: '600', color: '#4F46E5', marginBottom: 4 },
+  clarificationText: { fontSize: 13, color: '#E5E7EB', lineHeight: 20 },
+  disclaimer: { flexDirection: 'row', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderRadius: 12, padding: 14 },
+  disclaimerText: { flex: 1, fontSize: 12, color: '#F59E0B', marginLeft: 10, lineHeight: 18 },
 });

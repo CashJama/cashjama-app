@@ -24,7 +24,6 @@ export default function AmountScreen() {
   const [totalCash, setTotalCash] = useState(0);
   const [error, setError] = useState('');
   const [isCalculating, setIsCalculating] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
 
   useEffect(() => {
     const numAmount = parseFloat(amount) || 0;
@@ -82,7 +81,7 @@ export default function AmountScreen() {
 
           <View style={styles.inputSection}>
             <Text style={styles.inputLabel}>Enter deposit amount</Text>
-            <View style={[styles.amountInputContainer, isFocused && styles.amountInputFocused]}>
+            <View style={styles.amountInputContainer}>
               <Text style={styles.currencySymbol}>{RUPEE}</Text>
               <TextInput
                 style={styles.amountInput}
@@ -92,9 +91,8 @@ export default function AmountScreen() {
                 value={amount}
                 onChangeText={(text) => { setAmount(text.replace(/[^0-9]/g, '')); setError(''); }}
                 maxLength={7}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
                 selectionColor="#4F46E5"
+                underlineColorAndroid="transparent"
               />
             </View>
             <Text style={styles.minimumText}>Minimum amount: {RUPEE}300</Text>
@@ -152,10 +150,9 @@ const styles = StyleSheet.create({
   headerSubtitle: { fontSize: 14, color: '#9CA3AF', marginTop: 2 },
   inputSection: { marginTop: 24, marginBottom: 24 },
   inputLabel: { fontSize: 14, color: '#9CA3AF', marginBottom: 12 },
-  amountInputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#111827', borderRadius: 16, padding: 20, borderWidth: 2, borderColor: '#374151' },
-  amountInputFocused: { borderColor: '#4F46E5' },
+  amountInputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#111827', borderRadius: 16, padding: 20, borderWidth: 1, borderColor: '#374151' },
   currencySymbol: { fontSize: 36, fontWeight: '700', color: '#9CA3AF', marginRight: 8 },
-  amountInput: { flex: 1, fontSize: 36, fontWeight: '700', color: '#FFFFFF', padding: 0, outlineStyle: 'none' },
+  amountInput: { flex: 1, fontSize: 36, fontWeight: '700', color: '#FFFFFF', padding: 0, backgroundColor: 'transparent', borderWidth: 0 },
   minimumText: { fontSize: 12, color: '#6B7280', marginTop: 8 },
   quickAmounts: { flexDirection: 'row', gap: 10, marginBottom: 24 },
   quickAmountButton: { flex: 1, backgroundColor: '#1F2937', borderRadius: 10, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: '#374151' },
