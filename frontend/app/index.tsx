@@ -5,17 +5,22 @@ import { useAuth } from '../src/context/AuthContext';
 
 export default function Index() {
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
     if (!isLoading) {
-      if (isAuthenticated) {
-        router.replace('/(user)/home');
+      if (isAuthenticated && user) {
+        // Route based on user role
+        if (user.role === 'bc_agent') {
+          router.replace('/(bc)/home');
+        } else {
+          router.replace('/(user)/home');
+        }
       } else {
         router.replace('/(auth)/login');
       }
     }
-  }, [isAuthenticated, isLoading]);
+  }, [isAuthenticated, isLoading, user]);
 
   return (
     <View style={styles.container}>
