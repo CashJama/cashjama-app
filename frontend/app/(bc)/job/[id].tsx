@@ -7,7 +7,6 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  TextInput,
   Linking,
   Platform,
 } from 'react-native';
@@ -36,13 +35,20 @@ interface Job {
   job_otp_verified?: boolean;
 }
 
+const STATUS_FLOW = [
+  { key: 'agent_assigned', label: 'Assigned', nextAction: 'Mark Arrived' },
+  { key: 'arrived', label: 'Arrived', nextAction: 'Mark Cash Collected' },
+  { key: 'cash_collected', label: 'Cash Collected', nextAction: 'Mark Deposited' },
+  { key: 'deposited', label: 'Deposited', nextAction: 'Complete Job' },
+  { key: 'completed', label: 'Completed', nextAction: null },
+];
+
 export default function JobDetailsScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const [job, setJob] = useState<Job | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [otp, setOtp] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     loadJob();
@@ -60,71 +66,47 @@ export default function JobDetailsScreen() {
     }
   };
 
-  const handleVerifyOTP = async () => {
-    if (otp.length !== 4) {
-      Alert.alert('Invalid OTP', 'Please enter the 4-digit OTP from the customer');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await api.verifyJobOTP(id, otp);
-      Alert.alert('OTP Verified', 'Job is now in progress. Proceed with the deposit.');
-      loadJob();
-    } catch (error: any) {
-      const message = error.response?.data?.detail || 'Invalid OTP';
-      Alert.alert('Error', message);
-    } finally {
-      setIsSubmitting(false);
-    }
+  const getNextStatus = (currentStatus: string) => {
+    const statusMap: Record<string, string> = {
+      agent_assigned: 'arrived',
+      arrived: 'cash_collected',
+      cash_collected: 'deposited',
+      deposited: 'completed',
+    };
+    return statusMap[currentStatus];
   };
 
-  const handleCompleteJob = async () => {
+  const handleUpdateStatus = async () => {
+    if (!job) return;
+    
+    const nextStatus = getNextStatus(job.status);
+    if (!nextStatus) return;
+
+    const currentStep = STATUS_FLOW.find(s => s.key === job.status);
+    
     Alert.alert(
-      'Complete Job',
-      'Are you sure the deposit has been made to the customer\'s bank account?',
+      'Update Status',
+      `Mark this job as "${STATUS_FLOW.find(s => s.key === nextStatus)?.label}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Confirm Complete',
+          text: 'Confirm',
           onPress: async () => {
-            setIsSubmitting(true);
+            setIsUpdating(true);
             try {
-              const result = await api.completeJob(id);
-              Alert.alert(
-                'Job Completed!',
-                `Earnings: ${RUPEE}${result.earnings}`,
-                [{ text: 'OK', onPress: () => router.back() }]
-              );
+              if (nextStatus === 'completed') {
+                await api.completeJob(id);
+                Alert.alert('Success', 'Job completed successfully!', [
+                  { text: 'OK', onPress: () => router.back() }
+                ]);
+              } else {
+                await api.updateJobStatus(id, nextStatus);
+                loadJob();
+              }
             } catch (error: any) {
-              const message = error.response?.data?.detail || 'Failed to complete job';
-              Alert.alert('Error', message);
+              Alert.alert('Error', error.response?.data?.detail || 'Failed to update status');
             } finally {
-              setIsSubmitting(false);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleRejectJob = async () => {
-    Alert.alert(
-      'Release Job',
-      'Release this job back to the pool?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Release',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await api.rejectJob(id);
-              Alert.alert('Job Released', 'Job has been released back to the pool.');
-              router.back();
-            } catch (error: any) {
-              const message = error.response?.data?.detail || 'Failed to release job';
-              Alert.alert('Error', message);
+              setIsUpdating(false);
             }
           },
         },
@@ -148,6 +130,11 @@ export default function JobDetailsScreen() {
     Linking.openURL(`tel:${job.user_mobile}`);
   };
 
+  const getCurrentStepIndex = () => {
+    if (!job) return 0;
+    return STATUS_FLOW.findIndex(s => s.key === job.status);
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
@@ -163,13 +150,17 @@ export default function JobDetailsScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.loadingContainer}>
           <Text style={styles.errorText}>Job not found</Text>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Text style={styles.backBtnText}>Go Back</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
   }
 
-  const isAssigned = job.status === 'agent_assigned';
-  const isInProgress = job.status === 'in_progress';
+  const currentStepIndex = getCurrentStepIndex();
+  const currentStep = STATUS_FLOW[currentStepIndex];
+  const isCompleted = job.status === 'completed';
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -235,85 +226,68 @@ export default function JobDetailsScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* OTP Section (if assigned but not verified) */}
-        {isAssigned && !job.job_otp_verified && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Customer Verification</Text>
-            <View style={styles.otpCard}>
-              <Text style={styles.otpInstructions}>
-                Ask the customer for the 4-digit OTP shown on their app
-              </Text>
-              <View style={styles.otpInputContainer}>
-                <TextInput
-                  style={styles.otpInput}
-                  placeholder="Enter OTP"
-                  placeholderTextColor="#6B7280"
-                  keyboardType="number-pad"
-                  maxLength={4}
-                  value={otp}
-                  onChangeText={setOtp}
-                />
-                <TouchableOpacity
-                  style={[styles.verifyButton, otp.length !== 4 && styles.verifyButtonDisabled]}
-                  onPress={handleVerifyOTP}
-                  disabled={otp.length !== 4 || isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <ActivityIndicator color="#FFFFFF" size="small" />
-                  ) : (
-                    <Text style={styles.verifyButtonText}>Verify</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.devNote}>Dev Mode: Use OTP "1234"</Text>
-            </View>
-          </View>
-        )}
-
-        {/* Status */}
+        {/* Status Progress */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Status</Text>
-          <View style={styles.statusCard}>
-            <View style={[styles.statusStep, { opacity: 1 }]}>
-              <View style={[styles.statusDot, { backgroundColor: '#10B981' }]} />
-              <Text style={styles.statusStepText}>Job Accepted</Text>
-            </View>
-            <View style={[styles.statusStep, { opacity: job.job_otp_verified ? 1 : 0.4 }]}>
-              <View style={[styles.statusDot, { backgroundColor: job.job_otp_verified ? '#10B981' : '#374151' }]} />
-              <Text style={styles.statusStepText}>OTP Verified</Text>
-            </View>
-            <View style={[styles.statusStep, { opacity: isInProgress ? 1 : 0.4 }]}>
-              <View style={[styles.statusDot, { backgroundColor: isInProgress ? '#F59E0B' : '#374151' }]} />
-              <Text style={styles.statusStepText}>In Progress</Text>
-            </View>
+          <Text style={styles.sectionTitle}>Progress</Text>
+          <View style={styles.progressCard}>
+            {STATUS_FLOW.map((step, index) => {
+              const isComplete = index < currentStepIndex;
+              const isCurrent = index === currentStepIndex;
+              return (
+                <View key={step.key} style={styles.progressStep}>
+                  <View style={styles.progressLeft}>
+                    <View style={[
+                      styles.progressDot,
+                      isComplete && styles.progressDotComplete,
+                      isCurrent && styles.progressDotCurrent
+                    ]}>
+                      {isComplete && <Ionicons name="checkmark" size={12} color="#FFFFFF" />}
+                    </View>
+                    {index < STATUS_FLOW.length - 1 && (
+                      <View style={[styles.progressLine, isComplete && styles.progressLineComplete]} />
+                    )}
+                  </View>
+                  <Text style={[
+                    styles.progressLabel,
+                    (isComplete || isCurrent) && styles.progressLabelActive
+                  ]}>
+                    {step.label}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
         </View>
       </ScrollView>
 
-      {/* Bottom Actions */}
-      <View style={styles.bottomActions}>
-        {isAssigned && (
-          <TouchableOpacity style={styles.rejectButton} onPress={handleRejectJob}>
-            <Text style={styles.rejectButtonText}>Release Job</Text>
-          </TouchableOpacity>
-        )}
-        {isInProgress && (
+      {/* Bottom Action */}
+      {!isCompleted && currentStep?.nextAction && (
+        <View style={styles.bottomAction}>
           <TouchableOpacity
-            style={styles.completeButton}
-            onPress={handleCompleteJob}
-            disabled={isSubmitting}
+            style={styles.actionButton}
+            onPress={handleUpdateStatus}
+            disabled={isUpdating}
           >
-            {isSubmitting ? (
+            {isUpdating ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
               <>
                 <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
-                <Text style={styles.completeButtonText}>Complete Job</Text>
+                <Text style={styles.actionButtonText}>{currentStep.nextAction}</Text>
               </>
             )}
           </TouchableOpacity>
-        )}
-      </View>
+        </View>
+      )}
+
+      {isCompleted && (
+        <View style={styles.bottomAction}>
+          <View style={styles.completedBadge}>
+            <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+            <Text style={styles.completedText}>Job Completed</Text>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -321,13 +295,17 @@ export default function JobDetailsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0A0F1C' },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  errorText: { color: '#EF4444', fontSize: 16 },
+  errorText: { color: '#EF4444', fontSize: 16, marginBottom: 16 },
+  backBtn: { backgroundColor: '#1F2937', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
+  backBtnText: { color: '#FFFFFF', fontSize: 14 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1F2937',
   },
   backButton: {
     width: 44,
@@ -339,7 +317,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 18, fontWeight: '600', color: '#FFFFFF' },
   scrollView: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 120 },
+  scrollContent: { paddingHorizontal: 20, paddingVertical: 16, paddingBottom: 100 },
   amountCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
@@ -389,11 +367,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  locationCard: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 16,
-  },
+  locationCard: { backgroundColor: '#111827', borderRadius: 16, padding: 16 },
   locationInfo: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
   locationText: { flex: 1, fontSize: 14, color: '#FFFFFF', marginLeft: 12, lineHeight: 20 },
   navigateButton: {
@@ -405,46 +379,24 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   navigateText: { fontSize: 14, fontWeight: '600', color: '#10B981', marginLeft: 8 },
-  otpCard: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 20,
-  },
-  otpInstructions: { fontSize: 14, color: '#9CA3AF', marginBottom: 16, textAlign: 'center' },
-  otpInputContainer: { flexDirection: 'row', gap: 12 },
-  otpInput: {
-    flex: 1,
-    backgroundColor: '#1F2937',
+  progressCard: { backgroundColor: '#111827', borderRadius: 16, padding: 20 },
+  progressStep: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 },
+  progressLeft: { alignItems: 'center', marginRight: 12 },
+  progressDot: {
+    width: 24,
+    height: 24,
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 18,
-    color: '#FFFFFF',
-    textAlign: 'center',
-    letterSpacing: 8,
-  },
-  verifyButton: {
-    backgroundColor: '#10B981',
-    borderRadius: 12,
-    paddingHorizontal: 24,
+    backgroundColor: '#374151',
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  verifyButtonDisabled: { backgroundColor: '#374151' },
-  verifyButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
-  devNote: { fontSize: 11, color: '#6B7280', textAlign: 'center', marginTop: 12 },
-  statusCard: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 16,
-  },
-  statusStep: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  statusDot: { width: 12, height: 12, borderRadius: 6, marginRight: 12 },
-  statusStepText: { fontSize: 14, color: '#FFFFFF' },
-  bottomActions: {
+  progressDotComplete: { backgroundColor: '#10B981' },
+  progressDotCurrent: { backgroundColor: '#F59E0B' },
+  progressLine: { width: 2, height: 24, backgroundColor: '#374151', marginTop: 4 },
+  progressLineComplete: { backgroundColor: '#10B981' },
+  progressLabel: { fontSize: 14, color: '#6B7280', paddingTop: 2 },
+  progressLabelActive: { color: '#FFFFFF', fontWeight: '500' },
+  bottomAction: {
     position: 'absolute',
     bottom: 0,
     left: 0,
@@ -455,19 +407,8 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     borderTopWidth: 1,
     borderTopColor: '#1F2937',
-    flexDirection: 'row',
-    gap: 12,
   },
-  rejectButton: {
-    flex: 1,
-    backgroundColor: '#1F2937',
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  rejectButtonText: { fontSize: 16, fontWeight: '600', color: '#EF4444' },
-  completeButton: {
-    flex: 1,
+  actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -476,5 +417,15 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     gap: 8,
   },
-  completeButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  actionButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  completedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderRadius: 12,
+    paddingVertical: 16,
+    gap: 8,
+  },
+  completedText: { fontSize: 16, fontWeight: '600', color: '#10B981' },
 });
