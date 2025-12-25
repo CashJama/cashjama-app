@@ -5,7 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Alert,
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
@@ -14,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
 import { api } from '../../src/services/api';
+import DarkModal from '../../src/components/DarkModal';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -21,10 +21,17 @@ export default function ProfileScreen() {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(user?.name || '');
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Modal states
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleSaveProfile = async () => {
     if (!name.trim()) {
-      Alert.alert('Error', 'Please enter your name');
+      setErrorMessage('Please enter your name');
+      setShowErrorModal(true);
       return;
     }
     setIsLoading(true);
@@ -32,19 +39,23 @@ export default function ProfileScreen() {
       await api.updateProfile({ name: name.trim() });
       updateUser({ name: name.trim() });
       setIsEditing(false);
-      Alert.alert('Success', 'Profile updated successfully');
+      setShowSuccessModal(true);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.detail || 'Failed to update profile');
+      setErrorMessage(error.response?.data?.detail || 'Failed to update profile');
+      setShowErrorModal(true);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Logout', style: 'destructive', onPress: async () => { await logout(); router.replace('/(auth)/login'); } },
-    ]);
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = async () => {
+    setShowLogoutModal(false);
+    await logout();
+    router.replace('/(auth)/login');
   };
 
   return (
