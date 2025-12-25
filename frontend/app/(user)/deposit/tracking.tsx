@@ -30,7 +30,7 @@ interface DepositDetails {
 
 export default function TrackingScreen() {
   const router = useRouter();
-  const { depositId, from } = useLocalSearchParams<{ depositId: string; from?: string }>();
+  const { depositId, from, source } = useLocalSearchParams<{ depositId: string; from?: string; source?: string }>();
   const [deposit, setDeposit] = useState<DepositDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -40,7 +40,8 @@ export default function TrackingScreen() {
   // Handle back navigation based on where user came from
   const handleBack = () => {
     if (from === 'history') {
-      router.push('/(user)/history');
+      // Go back to history with the source param preserved
+      router.push({ pathname: '/(user)/history', params: { source: source || 'tab' } });
     } else {
       router.push('/(user)/home');
     }
