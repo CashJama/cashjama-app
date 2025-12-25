@@ -30,21 +30,19 @@ interface DepositDetails {
 
 export default function TrackingScreen() {
   const router = useRouter();
-  const navigation = useNavigation();
-  const { depositId } = useLocalSearchParams<{ depositId: string }>();
+  const { depositId, from } = useLocalSearchParams<{ depositId: string; from?: string }>();
   const [deposit, setDeposit] = useState<DepositDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
 
-  // Handle back navigation - use stack back if possible, fallback to history
+  // Handle back navigation based on where user came from
   const handleBack = () => {
-    if (navigation.canGoBack()) {
-      router.back();
-    } else {
-      // Fallback to history if no back stack available
+    if (from === 'history') {
       router.push('/(user)/history');
+    } else {
+      router.push('/(user)/home');
     }
   };
 
