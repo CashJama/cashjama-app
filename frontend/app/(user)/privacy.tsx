@@ -7,10 +7,15 @@ import { Ionicons } from '@expo/vector-icons';
 export default function PrivacyScreen() {
   const router = useRouter();
 
+  const goBack = () => {
+    // Navigate back to Profile tab
+    router.push('/(user)/profile');
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backButton} onPress={goBack}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Privacy Policy</Text>
