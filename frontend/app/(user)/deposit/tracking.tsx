@@ -98,8 +98,8 @@ export default function TrackingScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#4F46E5" />} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.replace('/(user)/home')}><Ionicons name="arrow-back" size={24} color="#FFFFFF" /></TouchableOpacity>
-          <View style={styles.headerContent}><Text style={styles.headerTitle}>Track Request</Text><Text style={styles.headerSubtitle}>#{deposit.id.slice(-8)}</Text></View>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}><Ionicons name="arrow-back" size={24} color="#FFFFFF" /></TouchableOpacity>
+          <View style={styles.headerContent}><Text style={styles.headerTitle}>Track Request</Text><Text style={styles.headerSubtitle}>Request ID: {formatRequestId(deposit.id)}</Text></View>
         </View>
 
         <View style={styles.statusCard}>
