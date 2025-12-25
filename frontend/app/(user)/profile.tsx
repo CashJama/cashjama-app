@@ -55,30 +55,32 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.profileCard}>
-          <View style={styles.avatarContainer}>
-            <Ionicons name="person" size={40} color="#4F46E5" />
-          </View>
-          <View style={styles.profileInfo}>
-            {isEditing ? (
-              <TextInput style={styles.nameInput} value={name} onChangeText={setName} placeholder="Enter your name" placeholderTextColor="#6B7280" autoFocus />
-            ) : (
-              <Text style={styles.profileName}>{user?.name || 'Set your name'}</Text>
-            )}
-            <Text style={styles.profileMobile}>+91 {user?.mobile}</Text>
-          </View>
-          {isEditing ? (
-            <View style={styles.editActions}>
-              <TouchableOpacity style={styles.cancelButton} onPress={() => { setName(user?.name || ''); setIsEditing(false); }} disabled={isLoading}>
-                <Ionicons name="close" size={20} color="#9CA3AF" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile} disabled={isLoading}>
-                {isLoading ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Ionicons name="checkmark" size={20} color="#FFFFFF" />}
-              </TouchableOpacity>
+          <View style={styles.profileCardRow}>
+            <View style={styles.avatarContainer}>
+              <Ionicons name="person" size={40} color="#4F46E5" />
             </View>
-          ) : (
-            <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(true)}>
-              <Ionicons name="pencil" size={18} color="#4F46E5" />
-            </TouchableOpacity>
+            <View style={styles.profileInfo}>
+              <Text style={styles.profileName}>{user?.name || 'Set your name'}</Text>
+              <Text style={styles.profileMobile}>+91 {user?.mobile}</Text>
+            </View>
+            {!isEditing && (
+              <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(true)}>
+                <Ionicons name="pencil" size={18} color="#4F46E5" />
+              </TouchableOpacity>
+            )}
+          </View>
+          {isEditing && (
+            <View style={styles.nameInputContainer}>
+              <TextInput style={styles.nameInput} value={name} onChangeText={setName} placeholder="Enter your name" placeholderTextColor="#6B7280" autoFocus />
+              <View style={styles.editActionsRow}>
+                <TouchableOpacity style={styles.cancelButton} onPress={() => { setName(user?.name || ''); setIsEditing(false); }} disabled={isLoading}>
+                  <Ionicons name="close" size={22} color="#9CA3AF" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile} disabled={isLoading}>
+                  {isLoading ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Ionicons name="checkmark" size={22} color="#FFFFFF" />}
+                </TouchableOpacity>
+              </View>
+            </View>
           )}
         </View>
 
