@@ -36,10 +36,10 @@ export default function ConfirmScreen() {
         <View style={styles.summaryCard}>
           <View style={styles.summaryHeader}><Ionicons name="receipt" size={24} color="#4F46E5" /><Text style={styles.summaryTitle}>Deposit Summary</Text></View>
           <View style={styles.summaryContent}>
-            <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Deposit Amount</Text><Text style={styles.summaryValue}>\u20b9{amount.toLocaleString()}</Text></View>
-            <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Service Fee</Text><Text style={styles.summaryValue}>\u20b9{serviceFee}</Text></View>
+            <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Deposit Amount</Text><Text style={styles.summaryValue}>₹{amount.toLocaleString()}</Text></View>
+            <View style={styles.summaryRow}><Text style={styles.summaryLabel}>Service Fee</Text><Text style={styles.summaryValue}>₹{serviceFee}</Text></View>
             <View style={styles.divider} />
-            <View style={styles.summaryRow}><Text style={styles.totalLabel}>Total Cash to Hand Over</Text><Text style={styles.totalValue}>\u20b9{totalCash.toLocaleString()}</Text></View>
+            <View style={styles.summaryRow}><Text style={styles.totalLabel}>Total Cash to Hand Over</Text><Text style={styles.totalValue}>₹{totalCash.toLocaleString()}</Text></View>
           </View>
         </View>
 
