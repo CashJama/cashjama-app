@@ -109,7 +109,7 @@ export default function HistoryScreen() {
   const renderDepositItem = ({ item }: { item: Deposit }) => (
     <TouchableOpacity
       style={styles.depositCard}
-      onPress={() => router.push({ pathname: '/(user)/deposit/tracking', params: { depositId: item.id, from: 'history' } })}
+      onPress={() => router.push({ pathname: '/(user)/deposit/tracking', params: { depositId: item.id, from: 'history', source: source || 'tab' } })}
     >
       <View style={styles.depositHeader}>
         <View style={[styles.statusIconContainer, { backgroundColor: `${getStatusColor(item.status)}20` }]}>
