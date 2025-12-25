@@ -30,12 +30,23 @@ interface DepositDetails {
 
 export default function TrackingScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
   const { depositId } = useLocalSearchParams<{ depositId: string }>();
   const [deposit, setDeposit] = useState<DepositDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+
+  // Handle back navigation - use stack back if possible, fallback to history
+  const handleBack = () => {
+    if (navigation.canGoBack()) {
+      router.back();
+    } else {
+      // Fallback to history if no back stack available
+      router.push('/(user)/history');
+    }
+  };
 
   const fetchDeposit = async () => {
     try { const response = await api.getDepositDetails(depositId || ''); setDeposit(response); }
