@@ -97,7 +97,7 @@ export default function ProfileScreen() {
 
         <View style={styles.menuSection}>
           <Text style={styles.menuSectionTitle}>Account</Text>
-          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(user)/history')}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push({ pathname: '/(user)/history', params: { source: 'profile' } })}>
             <View style={styles.menuItemIcon}><Ionicons name="receipt-outline" size={22} color="#4F46E5" /></View>
             <View style={styles.menuItemContent}>
               <Text style={styles.menuItemTitle}>My Deposits</Text>
