@@ -9,13 +9,19 @@ const RUPEE = '₹';
 export default function FAQScreen() {
   const router = useRouter();
 
+  const goBack = () => {
+    // Navigate back to Profile tab
+    router.push('/(user)/profile');
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backButton} onPress={goBack}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Help & FAQ</Text>
+        <View style={{ width: 44 }} />
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
