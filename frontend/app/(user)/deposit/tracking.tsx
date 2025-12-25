@@ -137,7 +137,7 @@ export default function TrackingScreen() {
                 </View>
                 <View style={styles.timelineContent}>
                   <Text style={[styles.timelineLabel, step.isCompleted && styles.timelineLabelCompleted]}>{step.label}</Text>
-                  {step.time && <Text style={styles.timelineTime}>{format(new Date(step.time), 'hh:mm a')}</Text>}
+                  {step.time && <Text style={styles.timelineTime}>{formatLocalTime(step.time)}</Text>}
                 </View>
               </View>
             ))}
