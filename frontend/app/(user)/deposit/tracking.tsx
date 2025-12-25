@@ -135,10 +135,10 @@ export default function TrackingScreen() {
 
         <View style={styles.amountCard}>
           <Text style={styles.amountTitle}>Amount Details</Text>
-          <View style={styles.amountRow}><Text style={styles.amountLabel}>Deposit Amount</Text><Text style={styles.amountValue}>\u20b9{deposit.amount.toLocaleString()}</Text></View>
-          <View style={styles.amountRow}><Text style={styles.amountLabel}>Service Fee</Text><Text style={styles.amountValue}>\u20b9{deposit.service_fee}</Text></View>
+          <View style={styles.amountRow}><Text style={styles.amountLabel}>Deposit Amount</Text><Text style={styles.amountValue}>₹{deposit.amount.toLocaleString()}</Text></View>
+          <View style={styles.amountRow}><Text style={styles.amountLabel}>Service Fee</Text><Text style={styles.amountValue}>₹{deposit.service_fee}</Text></View>
           <View style={styles.amountDivider} />
-          <View style={styles.amountRow}><Text style={styles.totalLabel}>Total Cash</Text><Text style={styles.totalValue}>\u20b9{deposit.total_cash.toLocaleString()}</Text></View>
+          <View style={styles.amountRow}><Text style={styles.totalLabel}>Total Cash</Text><Text style={styles.totalValue}>₹{deposit.total_cash.toLocaleString()}</Text></View>
         </View>
 
         <View style={styles.locationCard}>
