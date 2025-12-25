@@ -93,7 +93,7 @@ export default function TrackingScreen() {
   };
 
   if (isLoading) { return (<SafeAreaView style={styles.container} edges={['top']}><View style={styles.loadingContainer}><ActivityIndicator size="large" color="#4F46E5" /></View></SafeAreaView>); }
-  if (!deposit) { return (<SafeAreaView style={styles.container} edges={['top']}><View style={styles.errorContainer}><Ionicons name="alert-circle" size={48} color="#EF4444" /><Text style={styles.errorText}>Deposit not found</Text><TouchableOpacity style={styles.goBackButton} onPress={() => router.replace('/(user)/home')}><Text style={styles.goBackButtonText}>Go to Home</Text></TouchableOpacity></View></SafeAreaView>); }
+  if (!deposit) { return (<SafeAreaView style={styles.container} edges={['top']}><View style={styles.errorContainer}><Ionicons name="alert-circle" size={48} color="#EF4444" /><Text style={styles.errorText}>Deposit not found</Text><TouchableOpacity style={styles.goBackButton} onPress={() => router.back()}><Text style={styles.goBackButtonText}>Go Back</Text></TouchableOpacity></View></SafeAreaView>); }
 
   const statusInfo = getStatusInfo(deposit.status);
   const statusSteps = getStatusSteps();
