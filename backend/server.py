@@ -245,7 +245,8 @@ def serialize_doc(doc: dict) -> dict:
         if key == "_id":
             continue  # Skip MongoDB _id
         elif isinstance(value, datetime):
-            result[key] = value.isoformat()
+            # Append Z to indicate UTC timezone for proper frontend parsing
+            result[key] = value.isoformat() + "Z"
         elif isinstance(value, dict):
             result[key] = serialize_doc(value)
         elif isinstance(value, list):
