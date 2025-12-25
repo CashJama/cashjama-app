@@ -100,7 +100,7 @@ export default function HistoryScreen() {
         </View>
         <View style={styles.depositInfo}>
           <Text style={styles.depositAmount}>₹{item.amount.toLocaleString()}</Text>
-          <Text style={styles.depositDate}>{format(new Date(item.created_at), 'MMM dd, yyyy • hh:mm a')}</Text>
+          <Text style={styles.depositDate}>{formatLocalDateTime(item.created_at)}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(item.status)}20` }]}>
           <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{getStatusLabel(item.status)}</Text>
