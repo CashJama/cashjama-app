@@ -62,7 +62,8 @@ export default function TrackingScreen() {
     try {
       await api.cancelDeposit(depositId || '', 'Cancelled by user');
       setShowCancelModal(false);
-      router.replace('/(user)/home');
+      // Use router.back() to go back and trigger useFocusEffect on home screen
+      router.back();
     } catch (error: any) {
       Alert.alert('Error', error.response?.data?.detail || 'Failed to cancel request');
     } finally {
