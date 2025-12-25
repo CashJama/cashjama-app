@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/context/AuthContext';
 import { api } from '../../src/services/api';
@@ -21,9 +21,12 @@ export default function HomeScreen() {
   const [activeDeposit, setActiveDeposit] = useState<any>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    checkActiveDeposit();
-  }, []);
+  // Refresh active deposit state every time screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      checkActiveDeposit();
+    }, [])
+  );
 
   const checkActiveDeposit = async () => {
     try {
@@ -35,6 +38,7 @@ export default function HomeScreen() {
       }
     } catch (error) {
       console.log('Error checking active deposit:', error);
+      setActiveDeposit(null);
     }
   };
 
