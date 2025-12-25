@@ -7,6 +7,11 @@ import { Ionicons } from '@expo/vector-icons';
 export default function ContactScreen() {
   const router = useRouter();
 
+  const goBack = () => {
+    // Navigate back to Profile tab
+    router.push('/(user)/profile');
+  };
+
   const contactOptions = [
     {
       icon: 'mail',
@@ -31,7 +36,7 @@ export default function ContactScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backButton} onPress={goBack}>
           <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Contact Us</Text>
