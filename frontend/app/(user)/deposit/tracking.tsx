@@ -19,6 +19,8 @@ export default function TrackingScreen() {
   const [deposit, setDeposit] = useState<DepositDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const fetchDeposit = async () => {
     try { const response = await api.getDepositDetails(depositId || ''); setDeposit(response); }
