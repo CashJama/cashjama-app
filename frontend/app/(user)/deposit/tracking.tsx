@@ -105,7 +105,7 @@ export default function TrackingScreen() {
   };
 
   if (isLoading) { return (<SafeAreaView style={styles.container} edges={['top']}><View style={styles.loadingContainer}><ActivityIndicator size="large" color="#4F46E5" /></View></SafeAreaView>); }
-  if (!deposit) { return (<SafeAreaView style={styles.container} edges={['top']}><View style={styles.errorContainer}><Ionicons name="alert-circle" size={48} color="#EF4444" /><Text style={styles.errorText}>Deposit not found</Text><TouchableOpacity style={styles.goBackButton} onPress={() => router.back()}><Text style={styles.goBackButtonText}>Go Back</Text></TouchableOpacity></View></SafeAreaView>); }
+  if (!deposit) { return (<SafeAreaView style={styles.container} edges={['top']}><View style={styles.errorContainer}><Ionicons name="alert-circle" size={48} color="#EF4444" /><Text style={styles.errorText}>Deposit not found</Text><TouchableOpacity style={styles.goBackButton} onPress={handleBack}><Text style={styles.goBackButtonText}>Go Back</Text></TouchableOpacity></View></SafeAreaView>); }
 
   const statusInfo = getStatusInfo(deposit.status);
   const statusSteps = getStatusSteps();
@@ -114,7 +114,7 @@ export default function TrackingScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#4F46E5" />} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}><Ionicons name="arrow-back" size={24} color="#FFFFFF" /></TouchableOpacity>
+          <TouchableOpacity style={styles.backButton} onPress={handleBack}><Ionicons name="arrow-back" size={24} color="#FFFFFF" /></TouchableOpacity>
           <View style={styles.headerContent}><Text style={styles.headerTitle}>Track Request</Text><Text style={styles.headerSubtitle}>Request ID: {formatRequestId(deposit.id)}</Text></View>
         </View>
 
