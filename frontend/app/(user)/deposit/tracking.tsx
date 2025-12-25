@@ -4,13 +4,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../../src/services/api';
-import { format } from 'date-fns';
 
-// Helper function to format time to local timezone
+// Helper function to format UTC timestamp to device local time
 const formatLocalTime = (dateStr: string | undefined) => {
   if (!dateStr) return '';
+  // Parse UTC time and convert to local
   const date = new Date(dateStr);
-  return format(date, 'hh:mm a');
+  return date.toLocaleTimeString('en-IN', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    hour12: true 
+  });
 };
 
 const formatRequestId = (id: string) => {
