@@ -38,7 +38,10 @@ export default function ConfirmScreen() {
     setIsSubmitting(true);
     try {
       const response = await api.createDeposit({ amount: parseFloat(params.amount || '0'), location: { latitude: parseFloat(params.latitude || '0'), longitude: parseFloat(params.longitude || '0'), address: params.address, accuracy: parseFloat(params.accuracy || '0') } });
-      if (response.success && response.deposit) { router.replace({ pathname: '/(user)/deposit/tracking', params: { depositId: response.deposit.id } }); }
+      if (response.success && response.deposit) { 
+        // Redirect to Home screen - it will show the active deposit with "Searching for Agent" status
+        router.replace('/(user)/home'); 
+      }
       else { setErrorMessage('Failed to create deposit request. Please try again.'); setShowErrorModal(true); }
     } catch (err: any) {
       const detail = err.response?.data?.detail || 'Failed to submit request. Please try again.';
