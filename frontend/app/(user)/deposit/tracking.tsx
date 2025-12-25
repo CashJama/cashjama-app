@@ -241,4 +241,15 @@ const styles = StyleSheet.create({
   cancelButtonText: { fontSize: 15, fontWeight: '600', color: '#EF4444' },
   receiptNote: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#1F2937', borderRadius: 12, padding: 14 },
   receiptNoteText: { flex: 1, fontSize: 12, color: '#9CA3AF', marginLeft: 10, lineHeight: 18 },
+  // Modal styles
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.8)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
+  modalContainer: { backgroundColor: '#111827', borderRadius: 20, padding: 24, width: '100%', maxWidth: 340, alignItems: 'center', borderWidth: 1, borderColor: '#1F2937' },
+  modalIconContainer: { width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(239, 68, 68, 0.1)', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  modalTitle: { fontSize: 20, fontWeight: '700', color: '#FFFFFF', marginBottom: 8 },
+  modalMessage: { fontSize: 14, color: '#9CA3AF', textAlign: 'center', lineHeight: 20, marginBottom: 24 },
+  modalActions: { flexDirection: 'row', gap: 12, width: '100%' },
+  modalCancelButton: { flex: 1, backgroundColor: '#1F2937', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  modalCancelButtonText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
+  modalConfirmButton: { flex: 1, backgroundColor: '#EF4444', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+  modalConfirmButtonText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
 });
