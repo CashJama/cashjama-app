@@ -154,6 +154,27 @@ export default function TrackingScreen() {
           <View style={styles.receiptNote}><Ionicons name="information-circle" size={20} color="#6B7280" /><Text style={styles.receiptNoteText}>This is NOT a bank receipt. Your cash has been deposited directly to your bank via authorized BC.</Text></View>
         )}
       </ScrollView>
+
+      {/* Dark-themed Cancel Modal */}
+      <Modal visible={showCancelModal} transparent animationType="fade" onRequestClose={() => setShowCancelModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalIconContainer}>
+              <Ionicons name="alert-circle" size={48} color="#EF4444" />
+            </View>
+            <Text style={styles.modalTitle}>Cancel Request?</Text>
+            <Text style={styles.modalMessage}>Are you sure you want to cancel this deposit request? This action cannot be undone.</Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalCancelButton} onPress={() => setShowCancelModal(false)} disabled={isCancelling}>
+                <Text style={styles.modalCancelButtonText}>No, Keep It</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.modalConfirmButton} onPress={confirmCancel} disabled={isCancelling}>
+                {isCancelling ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.modalConfirmButtonText}>Yes, Cancel</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
