@@ -7,12 +7,12 @@ import {
   ScrollView,
   RefreshControl,
   ActivityIndicator,
+  Switch,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import * as Location from 'expo-location';
 import { useAuth } from '../../src/context/AuthContext';
 import { api } from '../../src/services/api';
 
@@ -32,71 +32,36 @@ interface Job {
     address?: string;
   };
   created_at: string;
-  job_otp?: string;
 }
 
 export default function BCHomeScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'available' | 'assigned'>('available');
+  const [isOnline, setIsOnline] = useState(false);
   const [availableJobs, setAvailableJobs] = useState<Job[]>([]);
   const [assignedJobs, setAssignedJobs] = useState<Job[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [locationStatus, setLocationStatus] = useState<'tracking' | 'off'>('off');
+  const [isTogglingOnline, setIsTogglingOnline] = useState(false);
 
-  useEffect(() => {
-    loadJobs();
-    startLocationTracking();
-    
-    // Poll for new jobs every 30 seconds
-    const interval = setInterval(loadJobs, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [])
+  );
 
-  const startLocationTracking = async () => {
+  const loadData = async () => {
     try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert('Location Required', 'Location is needed to show you nearby jobs.');
-        return;
-      }
-
-      setLocationStatus('tracking');
-      
-      // Update location every 30 seconds
-      const updateLocation = async () => {
-        try {
-          const location = await Location.getCurrentPositionAsync({
-            accuracy: Location.Accuracy.Balanced,
-          });
-          await api.updateBCLocation(
-            location.coords.latitude,
-            location.coords.longitude,
-            location.coords.accuracy ?? undefined
-          );
-        } catch (error) {
-          console.log('Location update error:', error);
-        }
-      };
-
-      updateLocation();
-      setInterval(updateLocation, 30000);
-    } catch (error) {
-      console.log('Location tracking error:', error);
-    }
-  };
-
-  const loadJobs = async () => {
-    try {
-      const [availableRes, assignedRes] = await Promise.all([
+      const [onlineRes, availableRes, assignedRes] = await Promise.all([
+        api.getOnlineStatus(),
         api.getAvailableJobs(),
         api.getAssignedJobs(),
       ]);
+      setIsOnline(onlineRes.is_online || false);
       setAvailableJobs(availableRes.jobs || []);
       setAssignedJobs(assignedRes.jobs || []);
     } catch (error) {
-      console.log('Error loading jobs:', error);
+      console.log('Error loading data:', error);
     } finally {
       setIsLoading(false);
     }
@@ -104,81 +69,58 @@ export default function BCHomeScreen() {
 
   const onRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    await loadJobs();
+    await loadData();
     setIsRefreshing(false);
   }, []);
 
+  const toggleOnlineStatus = async (value: boolean) => {
+    setIsTogglingOnline(true);
+    try {
+      await api.setOnlineStatus(value);
+      setIsOnline(value);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update status');
+    } finally {
+      setIsTogglingOnline(false);
+    }
+  };
+
   const handleAcceptJob = async (jobId: string) => {
     try {
-      const result = await api.acceptJob(jobId);
-      Alert.alert(
-        'Job Accepted!',
-        `Job OTP: ${result.job_otp}\n\nShare this with the customer for verification.`,
-        [{ text: 'OK', onPress: loadJobs }]
-      );
+      await api.acceptJob(jobId);
+      Alert.alert('Success', 'Job accepted! You can now proceed to the customer.');
+      loadData();
     } catch (error: any) {
-      const message = error.response?.data?.detail || 'Failed to accept job';
-      Alert.alert('Error', message);
+      Alert.alert('Error', error.response?.data?.detail || 'Failed to accept job');
     }
   };
 
   const formatTime = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
   };
 
-  const renderJobCard = (job: Job, isAssigned: boolean) => (
-    <TouchableOpacity
-      key={job.id}
-      style={styles.jobCard}
-      onPress={() => router.push({ pathname: '/(bc)/job/[id]', params: { id: job.id } })}
-    >
-      <View style={styles.jobHeader}>
-        <View style={styles.amountContainer}>
-          <Text style={styles.amountLabel}>Deposit</Text>
-          <Text style={styles.amount}>{RUPEE}{job.amount.toLocaleString()}</Text>
-        </View>
-        <View style={styles.feeContainer}>
-          <Text style={styles.feeLabel}>Your Fee</Text>
-          <Text style={styles.fee}>{RUPEE}{job.service_fee}</Text>
-        </View>
-      </View>
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      agent_assigned: 'Assigned',
+      in_progress: 'In Progress',
+      arrived: 'Arrived',
+      cash_collected: 'Cash Collected',
+      deposited: 'Deposited',
+    };
+    return labels[status] || status;
+  };
 
-      <View style={styles.jobInfo}>
-        <View style={styles.infoRow}>
-          <Ionicons name="location" size={16} color="#9CA3AF" />
-          <Text style={styles.infoText} numberOfLines={1}>
-            {job.location.address || `${job.location.latitude.toFixed(4)}, ${job.location.longitude.toFixed(4)}`}
-          </Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Ionicons name="time" size={16} color="#9CA3AF" />
-          <Text style={styles.infoText}>{formatTime(job.created_at)}</Text>
-        </View>
-      </View>
-
-      {isAssigned ? (
-        <View style={styles.assignedActions}>
-          <View style={[styles.statusBadge, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
-            <Text style={[styles.statusText, { color: '#10B981' }]}>
-              {job.status === 'in_progress' ? 'In Progress' : 'Assigned'}
-            </Text>
-          </View>
-          <TouchableOpacity style={styles.viewButton}>
-            <Text style={styles.viewButtonText}>View Details</Text>
-            <Ionicons name="chevron-forward" size={16} color="#10B981" />
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <TouchableOpacity
-          style={styles.acceptButton}
-          onPress={() => handleAcceptJob(job.id)}
-        >
-          <Text style={styles.acceptButtonText}>Accept Job</Text>
-        </TouchableOpacity>
-      )}
-    </TouchableOpacity>
-  );
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      agent_assigned: '#F59E0B',
+      in_progress: '#3B82F6',
+      arrived: '#8B5CF6',
+      cash_collected: '#EC4899',
+      deposited: '#10B981',
+    };
+    return colors[status] || '#6B7280';
+  };
 
   if (isLoading) {
     return (
@@ -190,45 +132,31 @@ export default function BCHomeScreen() {
     );
   }
 
-  const currentJobs = activeTab === 'available' ? availableJobs : assignedJobs;
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
+      {/* Header with Online Toggle */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>BC Agent</Text>
+          <Text style={styles.greeting}>Welcome back,</Text>
           <Text style={styles.userName}>{user?.name || 'Agent'}</Text>
         </View>
-        <View style={styles.locationBadge}>
-          <View style={[styles.locationDot, { backgroundColor: locationStatus === 'tracking' ? '#10B981' : '#EF4444' }]} />
-          <Text style={styles.locationText}>
-            {locationStatus === 'tracking' ? 'GPS On' : 'GPS Off'}
+        <View style={styles.onlineToggle}>
+          <Text style={[styles.onlineLabel, { color: isOnline ? '#10B981' : '#EF4444' }]}>
+            {isOnline ? 'Online' : 'Offline'}
           </Text>
+          {isTogglingOnline ? (
+            <ActivityIndicator size="small" color="#10B981" />
+          ) : (
+            <Switch
+              value={isOnline}
+              onValueChange={toggleOnlineStatus}
+              trackColor={{ false: '#374151', true: 'rgba(16, 185, 129, 0.3)' }}
+              thumbColor={isOnline ? '#10B981' : '#6B7280'}
+            />
+          )}
         </View>
       </View>
 
-      {/* Tab Switcher */}
-      <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'available' && styles.activeTab]}
-          onPress={() => setActiveTab('available')}
-        >
-          <Text style={[styles.tabText, activeTab === 'available' && styles.activeTabText]}>
-            Available ({availableJobs.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'assigned' && styles.activeTab]}
-          onPress={() => setActiveTab('assigned')}
-        >
-          <Text style={[styles.tabText, activeTab === 'assigned' && styles.activeTabText]}>
-            My Jobs ({assignedJobs.length})
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Job List */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -237,25 +165,99 @@ export default function BCHomeScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {currentJobs.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Ionicons
-              name={activeTab === 'available' ? 'briefcase-outline' : 'checkmark-circle-outline'}
-              size={64}
-              color="#374151"
-            />
-            <Text style={styles.emptyTitle}>
-              {activeTab === 'available' ? 'No Jobs Available' : 'No Active Jobs'}
-            </Text>
-            <Text style={styles.emptySubtitle}>
-              {activeTab === 'available'
-                ? 'Pull down to refresh and check for new jobs'
-                : 'Accept a job from the Available tab'}
-            </Text>
+        {/* Assigned Jobs Section */}
+        {assignedJobs.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Your Active Jobs ({assignedJobs.length})</Text>
+            {assignedJobs.map((job) => (
+              <TouchableOpacity
+                key={job.id}
+                style={styles.jobCard}
+                onPress={() => router.push({ pathname: '/(bc)/job/[id]', params: { id: job.id } })}
+              >
+                <View style={styles.jobHeader}>
+                  <View style={styles.amountContainer}>
+                    <Text style={styles.amountLabel}>Amount</Text>
+                    <Text style={styles.amount}>{RUPEE}{job.amount.toLocaleString()}</Text>
+                  </View>
+                  <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(job.status)}20` }]}>
+                    <Text style={[styles.statusText, { color: getStatusColor(job.status) }]}>
+                      {getStatusLabel(job.status)}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.jobInfo}>
+                  <View style={styles.infoRow}>
+                    <Ionicons name="location" size={16} color="#9CA3AF" />
+                    <Text style={styles.infoText} numberOfLines={1}>
+                      {job.location.address || 'Location not specified'}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Ionicons name="call" size={16} color="#9CA3AF" />
+                    <Text style={styles.infoText}>{job.user_mobile}</Text>
+                  </View>
+                </View>
+                <View style={styles.jobFooter}>
+                  <Text style={styles.viewDetails}>Tap to update status</Text>
+                  <Ionicons name="chevron-forward" size={20} color="#10B981" />
+                </View>
+              </TouchableOpacity>
+            ))}
           </View>
-        ) : (
-          currentJobs.map((job) => renderJobCard(job, activeTab === 'assigned'))
         )}
+
+        {/* Available Jobs Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            Available Jobs ({availableJobs.length})
+          </Text>
+          {!isOnline ? (
+            <View style={styles.offlineMessage}>
+              <Ionicons name="information-circle" size={24} color="#F59E0B" />
+              <Text style={styles.offlineText}>Go online to see available jobs</Text>
+            </View>
+          ) : availableJobs.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="briefcase-outline" size={48} color="#374151" />
+              <Text style={styles.emptyTitle}>No Jobs Available</Text>
+              <Text style={styles.emptySubtitle}>Pull down to refresh</Text>
+            </View>
+          ) : (
+            availableJobs.map((job) => (
+              <View key={job.id} style={styles.jobCard}>
+                <View style={styles.jobHeader}>
+                  <View style={styles.amountContainer}>
+                    <Text style={styles.amountLabel}>Deposit</Text>
+                    <Text style={styles.amount}>{RUPEE}{job.amount.toLocaleString()}</Text>
+                  </View>
+                  <View style={styles.feeContainer}>
+                    <Text style={styles.feeLabel}>Your Fee</Text>
+                    <Text style={styles.fee}>{RUPEE}{job.service_fee}</Text>
+                  </View>
+                </View>
+                <View style={styles.jobInfo}>
+                  <View style={styles.infoRow}>
+                    <Ionicons name="location" size={16} color="#9CA3AF" />
+                    <Text style={styles.infoText} numberOfLines={1}>
+                      {job.location.address || 'Location not specified'}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Ionicons name="time" size={16} color="#9CA3AF" />
+                    <Text style={styles.infoText}>{formatTime(job.created_at)}</Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={styles.acceptButton}
+                  onPress={() => handleAcceptJob(job.id)}
+                >
+                  <Text style={styles.acceptButtonText}>Accept Job</Text>
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -270,38 +272,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1F2937',
   },
-  greeting: { fontSize: 14, color: '#10B981', fontWeight: '600' },
-  userName: { fontSize: 20, fontWeight: '700', color: '#FFFFFF', marginTop: 4 },
-  locationBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1F2937',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  locationDot: { width: 8, height: 8, borderRadius: 4, marginRight: 6 },
-  locationText: { fontSize: 12, color: '#9CA3AF', fontWeight: '500' },
-  tabContainer: {
-    flexDirection: 'row',
-    marginHorizontal: 20,
-    backgroundColor: '#1F2937',
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 16,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 10,
-  },
-  activeTab: { backgroundColor: '#10B981' },
-  tabText: { fontSize: 14, fontWeight: '600', color: '#9CA3AF' },
-  activeTabText: { color: '#FFFFFF' },
+  greeting: { fontSize: 14, color: '#9CA3AF' },
+  userName: { fontSize: 20, fontWeight: '700', color: '#FFFFFF', marginTop: 2 },
+  onlineToggle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  onlineLabel: { fontSize: 14, fontWeight: '600' },
   scrollView: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingBottom: 24 },
+  scrollContent: { paddingHorizontal: 20, paddingVertical: 16, paddingBottom: 24 },
+  section: { marginBottom: 24 },
+  sectionTitle: { fontSize: 16, fontWeight: '600', color: '#FFFFFF', marginBottom: 12 },
   jobCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
@@ -313,37 +294,22 @@ const styles = StyleSheet.create({
   jobHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
   amountContainer: {},
-  amountLabel: { fontSize: 12, color: '#9CA3AF', marginBottom: 4 },
-  amount: { fontSize: 24, fontWeight: '700', color: '#FFFFFF' },
+  amountLabel: { fontSize: 12, color: '#9CA3AF', marginBottom: 2 },
+  amount: { fontSize: 22, fontWeight: '700', color: '#FFFFFF' },
   feeContainer: { alignItems: 'flex-end' },
-  feeLabel: { fontSize: 12, color: '#9CA3AF', marginBottom: 4 },
-  fee: { fontSize: 20, fontWeight: '700', color: '#10B981' },
-  jobInfo: { marginBottom: 16 },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  infoText: { fontSize: 13, color: '#9CA3AF', marginLeft: 8, flex: 1 },
-  assignedActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
+  feeLabel: { fontSize: 12, color: '#9CA3AF', marginBottom: 2 },
+  fee: { fontSize: 18, fontWeight: '700', color: '#10B981' },
+  statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   statusText: { fontSize: 13, fontWeight: '600' },
-  viewButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  viewButtonText: { fontSize: 14, color: '#10B981', fontWeight: '600', marginRight: 4 },
+  jobInfo: { marginBottom: 12 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
+  infoText: { fontSize: 13, color: '#9CA3AF', marginLeft: 8, flex: 1 },
+  jobFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  viewDetails: { fontSize: 14, color: '#10B981', fontWeight: '500' },
   acceptButton: {
     backgroundColor: '#10B981',
     borderRadius: 12,
@@ -351,21 +317,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   acceptButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
-  emptyState: {
+  offlineMessage: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    gap: 12,
   },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    marginTop: 16,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 8,
-    textAlign: 'center',
-  },
+  offlineText: { fontSize: 14, color: '#F59E0B', flex: 1 },
+  emptyState: { alignItems: 'center', paddingVertical: 40 },
+  emptyTitle: { fontSize: 16, fontWeight: '600', color: '#FFFFFF', marginTop: 12 },
+  emptySubtitle: { fontSize: 14, color: '#6B7280', marginTop: 4 },
 });
