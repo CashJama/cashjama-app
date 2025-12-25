@@ -14,6 +14,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../src/services/api';
 import { format } from 'date-fns';
 
+// Helper function to format time to local timezone
+const formatLocalDateTime = (dateStr: string) => {
+  const date = new Date(dateStr);
+  return format(date, 'MMM dd, yyyy • hh:mm a');
+};
+
 interface Deposit {
   id: string;
   amount: number;
