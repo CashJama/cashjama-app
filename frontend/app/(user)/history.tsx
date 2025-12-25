@@ -154,8 +154,14 @@ export default function HistoryScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Deposit History</Text>
-        <Text style={styles.headerSubtitle}>{deposits.length} {deposits.length === 1 ? 'request' : 'requests'}</Text>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.push('/(user)/home')}>
+          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Deposit History</Text>
+          <Text style={styles.headerSubtitle}>{deposits.length} {deposits.length === 1 ? 'request' : 'requests'}</Text>
+        </View>
+        <View style={{ width: 44 }} />
       </View>
       <FlatList
         data={deposits}
