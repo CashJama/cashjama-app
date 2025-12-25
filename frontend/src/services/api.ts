@@ -153,6 +153,21 @@ class ApiService {
     return response.data;
   }
 
+  async updateJobStatus(depositId: string, status: string) {
+    const response = await this.instance.post(`/bc/jobs/${depositId}/update-status?status=${status}`);
+    return response.data;
+  }
+
+  async setOnlineStatus(isOnline: boolean) {
+    const response = await this.instance.put(`/bc/online-status?is_online=${isOnline}`);
+    return response.data;
+  }
+
+  async getOnlineStatus() {
+    const response = await this.instance.get('/bc/online-status');
+    return response.data;
+  }
+
   async updateBCLocation(latitude: number, longitude: number, accuracy?: number) {
     const response = await this.instance.put('/bc/location', { latitude, longitude, accuracy });
     return response.data;
