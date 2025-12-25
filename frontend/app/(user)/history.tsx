@@ -38,9 +38,19 @@ interface Deposit {
 
 export default function HistoryScreen() {
   const router = useRouter();
+  const { source } = useLocalSearchParams<{ source?: string }>();
   const [deposits, setDeposits] = useState<Deposit[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Handle back navigation based on source
+  const handleBack = () => {
+    if (source === 'profile') {
+      router.push('/(user)/profile');
+    } else {
+      router.replace('/(user)/home');
+    }
+  };
 
   useEffect(() => {
     fetchDeposits();
