@@ -6,6 +6,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../../src/services/api';
 import { format } from 'date-fns';
 
+// Helper function to format time to local timezone
+const formatLocalTime = (dateStr: string | undefined) => {
+  if (!dateStr) return '';
+  const date = new Date(dateStr);
+  return format(date, 'hh:mm a');
+};
+
+const formatRequestId = (id: string) => {
+  return id.slice(-4).toUpperCase();
+};
+
 interface DepositDetails {
   id: string; amount: number; service_fee: number; total_cash: number; status: string;
   location: { latitude: number; longitude: number; address?: string };
