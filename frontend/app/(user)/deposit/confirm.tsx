@@ -53,7 +53,7 @@ export default function ConfirmScreen() {
         <View style={styles.noticeCard}>
           <View style={styles.noticeHeader}><Ionicons name="alert-circle" size={22} color="#F59E0B" /><Text style={styles.noticeTitle}>Important</Text></View>
           <View style={styles.noticeList}>
-            {['Keep exact cash (\u20b9' + totalCash.toLocaleString() + ') ready', 'A BC agent will arrive at your location shortly', 'Share the OTP only with the assigned agent', 'Your cash will be deposited directly to your bank'].map((text, i) => (
+            {['Keep exact cash (₹' + totalCash.toLocaleString() + ') ready', 'A BC agent will arrive at your location shortly', 'Share the OTP only with the assigned agent', 'Your cash will be deposited directly to your bank'].map((text, i) => (
               <View key={i} style={styles.noticeItem}><View style={styles.bulletPoint} /><Text style={styles.noticeText}>{text}</Text></View>
             ))}
           </View>
