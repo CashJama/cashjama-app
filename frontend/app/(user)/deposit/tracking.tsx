@@ -39,10 +39,20 @@ export default function TrackingScreen() {
   const onRefresh = async () => { setIsRefreshing(true); await fetchDeposit(); setIsRefreshing(false); };
 
   const handleCancel = () => {
-    Alert.alert('Cancel Request', 'Are you sure you want to cancel this deposit request?', [
-      { text: 'No', style: 'cancel' },
-      { text: 'Yes, Cancel', style: 'destructive', onPress: async () => { try { await api.cancelDeposit(depositId || '', 'Cancelled by user'); router.replace('/(user)/home'); } catch (error: any) { Alert.alert('Error', error.response?.data?.detail || 'Failed to cancel request'); } } },
-    ]);
+    setShowCancelModal(true);
+  };
+
+  const confirmCancel = async () => {
+    setIsCancelling(true);
+    try {
+      await api.cancelDeposit(depositId || '', 'Cancelled by user');
+      setShowCancelModal(false);
+      router.replace('/(user)/home');
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.detail || 'Failed to cancel request');
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   const getStatusInfo = (status: string) => {
