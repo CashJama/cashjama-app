@@ -93,8 +93,8 @@ export default function HistoryScreen() {
           <Ionicons name={getStatusIcon(item.status) as any} size={20} color={getStatusColor(item.status)} />
         </View>
         <View style={styles.depositInfo}>
-          <Text style={styles.depositAmount}>\u20b9{item.amount.toLocaleString()}</Text>
-          <Text style={styles.depositDate}>{format(new Date(item.created_at), 'MMM dd, yyyy \u2022 hh:mm a')}</Text>
+          <Text style={styles.depositAmount}>₹{item.amount.toLocaleString()}</Text>
+          <Text style={styles.depositDate}>{format(new Date(item.created_at), 'MMM dd, yyyy • hh:mm a')}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(item.status)}20` }]}>
           <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{getStatusLabel(item.status)}</Text>
@@ -103,12 +103,12 @@ export default function HistoryScreen() {
       <View style={styles.depositDetails}>
         <View style={styles.detailItem}>
           <Text style={styles.detailLabel}>Service Fee</Text>
-          <Text style={styles.detailValue}>\u20b9{item.service_fee}</Text>
+          <Text style={styles.detailValue}>₹{item.service_fee}</Text>
         </View>
         <View style={styles.detailDivider} />
         <View style={styles.detailItem}>
           <Text style={styles.detailLabel}>Total Cash</Text>
-          <Text style={styles.detailValueHighlight}>\u20b9{item.total_cash.toLocaleString()}</Text>
+          <Text style={styles.detailValueHighlight}>₹{item.total_cash.toLocaleString()}</Text>
         </View>
       </View>
     </TouchableOpacity>
