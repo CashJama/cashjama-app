@@ -51,36 +51,15 @@ export default function UserLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="deposit/amount"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="deposit/location"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="deposit/confirm"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="deposit/tracking"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="faq"
-        options={{
-          href: null,
-        }}
-      />
+      {/* Hidden screens - no tab entry */}
+      <Tabs.Screen name="deposit/amount" options={{ href: null }} />
+      <Tabs.Screen name="deposit/location" options={{ href: null }} />
+      <Tabs.Screen name="deposit/confirm" options={{ href: null }} />
+      <Tabs.Screen name="deposit/tracking" options={{ href: null }} />
+      <Tabs.Screen name="faq" options={{ href: null }} />
+      <Tabs.Screen name="terms" options={{ href: null }} />
+      <Tabs.Screen name="privacy" options={{ href: null }} />
+      <Tabs.Screen name="contact" options={{ href: null }} />
     </Tabs>
   );
 }
