@@ -12,12 +12,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../src/services/api';
-import { format } from 'date-fns';
 
-// Helper function to format time to local timezone
+// Helper function to format UTC timestamp to device local time
 const formatLocalDateTime = (dateStr: string) => {
   const date = new Date(dateStr);
-  return format(date, 'MMM dd, yyyy • hh:mm a');
+  return date.toLocaleDateString('en-IN', {
+    month: 'short',
+    day: '2-digit',
+    year: 'numeric',
+  }) + ' • ' + date.toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
 };
 
 interface Deposit {
