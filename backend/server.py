@@ -833,7 +833,7 @@ async def complete_job(deposit_id: str, current_user: dict = Depends(require_bc_
     if deposit.get("bc_agent_id") != current_user["id"]:
         raise HTTPException(status_code=403, detail="This job is not assigned to you")
     
-    if deposit["status"] != "in_progress":
+    if deposit["status"] not in ["in_progress", "arrived", "cash_collected", "deposited"]:
         raise HTTPException(status_code=400, detail="Job must be in progress to complete")
     
     # Complete the job
@@ -854,6 +854,89 @@ async def complete_job(deposit_id: str, current_user: dict = Depends(require_bc_
         "success": True,
         "message": "Job completed successfully",
         "earnings": deposit["service_fee"]
+    }
+
+@api_router.post("/bc/jobs/{deposit_id}/update-status")
+async def update_job_status(deposit_id: str, status: str, current_user: dict = Depends(require_bc_agent)):
+    """Update job status: arrived, cash_collected, deposited, completed"""
+    deposit = await db.deposits.find_one({"id": deposit_id})
+    
+    if not deposit:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    if deposit.get("bc_agent_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="This job is not assigned to you")
+    
+    # Valid status transitions
+    valid_statuses = ["arrived", "cash_collected", "deposited", "completed"]
+    if status not in valid_statuses:
+        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid_statuses}")
+    
+    # Check valid transitions
+    current_status = deposit["status"]
+    status_order = ["agent_assigned", "in_progress", "arrived", "cash_collected", "deposited", "completed"]
+    
+    if current_status not in status_order:
+        raise HTTPException(status_code=400, detail="Job is not in a valid state for status update")
+    
+    current_idx = status_order.index(current_status)
+    new_idx = status_order.index(status)
+    
+    # Allow forward progression only
+    if new_idx <= current_idx:
+        raise HTTPException(status_code=400, detail=f"Cannot move from {current_status} to {status}")
+    
+    update_data = {
+        "status": status,
+        "updated_at": datetime.utcnow()
+    }
+    
+    # Set timestamps based on status
+    if status == "arrived":
+        update_data["arrived_at"] = datetime.utcnow()
+    elif status == "cash_collected":
+        update_data["cash_collected_at"] = datetime.utcnow()
+    elif status == "deposited":
+        update_data["deposited_at"] = datetime.utcnow()
+    elif status == "completed":
+        update_data["completed_at"] = datetime.utcnow()
+    
+    await db.deposits.update_one({"id": deposit_id}, {"$set": update_data})
+    
+    logger.info(f"Job {deposit_id} status updated to {status} by BC {current_user['id']}")
+    
+    return {
+        "success": True,
+        "message": f"Status updated to {status}",
+        "status": status
+    }
+
+@api_router.put("/bc/online-status")
+async def update_online_status(is_online: bool, current_user: dict = Depends(require_bc_agent)):
+    """Update BC agent online/offline status"""
+    await db.users.update_one(
+        {"id": current_user["id"]},
+        {
+            "$set": {
+                "is_online": is_online,
+                "last_online_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            }
+        }
+    )
+    
+    return {
+        "success": True,
+        "is_online": is_online,
+        "message": "Online" if is_online else "Offline"
+    }
+
+@api_router.get("/bc/online-status")
+async def get_online_status(current_user: dict = Depends(require_bc_agent)):
+    """Get BC agent online/offline status"""
+    user = await db.users.find_one({"id": current_user["id"]})
+    return {
+        "is_online": user.get("is_online", False)
     }
 
 @api_router.put("/bc/location")
