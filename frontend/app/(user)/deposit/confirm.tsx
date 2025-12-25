@@ -112,6 +112,37 @@ export default function ConfirmScreen() {
           {isSubmitting ? <ActivityIndicator color="#FFFFFF" /> : (<><Text style={styles.submitButtonText}>Submit Request</Text><Ionicons name="checkmark-circle" size={20} color="#FFFFFF" /></>)}
         </TouchableOpacity>
       </View>
+
+      {/* Confirm checkbox modal */}
+      <DarkModal
+        visible={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        title="Please Confirm"
+        message="Please confirm the details before submitting."
+        type="warning"
+        primaryButton={{ text: 'OK', onPress: () => setShowConfirmModal(false) }}
+      />
+
+      {/* Error modal */}
+      <DarkModal
+        visible={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        title="Error"
+        message={errorMessage}
+        type="error"
+        primaryButton={{ text: 'OK', onPress: () => setShowErrorModal(false) }}
+      />
+
+      {/* Active deposit modal */}
+      <DarkModal
+        visible={showActiveModal}
+        onClose={() => setShowActiveModal(false)}
+        title="Active Request"
+        message="You already have an active deposit request. Please wait for it to be completed or cancel it before creating a new one."
+        type="info"
+        primaryButton={{ text: 'View Request', onPress: goToActiveDeposit }}
+        secondaryButton={{ text: 'Cancel', onPress: () => { setShowActiveModal(false); router.back(); } }}
+      />
     </SafeAreaView>
   );
 }
