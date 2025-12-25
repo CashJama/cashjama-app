@@ -1,24 +1,64 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../../src/services/api';
+import DarkModal from '../../../src/components/DarkModal';
 
 export default function ConfirmScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ amount: string; serviceFee: string; totalCash: string; latitude: string; longitude: string; address: string; accuracy: string }>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [showActiveModal, setShowActiveModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [activeDepositId, setActiveDepositId] = useState<string | null>(null);
+
+  useEffect(() => {
+    checkActiveDeposit();
+  }, []);
+
+  const checkActiveDeposit = async () => {
+    try {
+      const response = await api.getActiveDeposit();
+      if (response.has_active && response.deposit) {
+        setActiveDepositId(response.deposit.id);
+        setShowActiveModal(true);
+      }
+    } catch (error) {
+      console.log('Error checking active deposit:', error);
+    }
+  };
 
   const handleSubmit = async () => {
-    if (!isConfirmed) { Alert.alert('Please Confirm', 'Please confirm the details before submitting.'); return; }
+    if (!isConfirmed) { setShowConfirmModal(true); return; }
     setIsSubmitting(true);
     try {
       const response = await api.createDeposit({ amount: parseFloat(params.amount || '0'), location: { latitude: parseFloat(params.latitude || '0'), longitude: parseFloat(params.longitude || '0'), address: params.address, accuracy: parseFloat(params.accuracy || '0') } });
       if (response.success && response.deposit) { router.replace({ pathname: '/(user)/deposit/tracking', params: { depositId: response.deposit.id } }); }
-      else { Alert.alert('Error', 'Failed to create deposit request. Please try again.'); }
-    } catch (err: any) { Alert.alert('Error', err.response?.data?.detail || 'Failed to submit request. Please try again.'); } finally { setIsSubmitting(false); }
+      else { setErrorMessage('Failed to create deposit request. Please try again.'); setShowErrorModal(true); }
+    } catch (err: any) {
+      const detail = err.response?.data?.detail || 'Failed to submit request. Please try again.';
+      if (detail.includes('active')) {
+        setActiveDepositId(err.response?.data?.deposit_id || null);
+        setShowActiveModal(true);
+      } else {
+        setErrorMessage(detail);
+        setShowErrorModal(true);
+      }
+    } finally { setIsSubmitting(false); }
+  };
+
+  const goToActiveDeposit = () => {
+    setShowActiveModal(false);
+    if (activeDepositId) {
+      router.replace({ pathname: '/(user)/deposit/tracking', params: { depositId: activeDepositId } });
+    } else {
+      router.replace('/(user)/home');
+    }
   };
 
   const amount = parseFloat(params.amount || '0');
