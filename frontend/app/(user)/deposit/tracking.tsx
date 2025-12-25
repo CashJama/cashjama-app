@@ -57,7 +57,7 @@ export default function TrackingScreen() {
 
   useFocusEffect(useCallback(() => {
     fetchDeposit();
-    const interval = setInterval(() => { if (deposit && ['requested', 'agent_assigned', 'in_progress'].includes(deposit.status)) { fetchDeposit(); } }, 30000);
+    const interval = setInterval(() => { if (deposit && ['requested', 'agent_assigned', 'arrived', 'cash_collected', 'deposited', 'in_progress'].includes(deposit.status)) { fetchDeposit(); } }, 15000);
     return () => clearInterval(interval);
   }, [deposit?.status]));
 
