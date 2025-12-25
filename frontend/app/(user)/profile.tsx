@@ -117,7 +117,7 @@ export default function ProfileScreen() {
             </View>
             <Ionicons name="chevron-forward" size={20} color="#6B7280" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(user)/contact')}>
             <View style={styles.menuItemIcon}><Ionicons name="chatbubble-outline" size={22} color="#4F46E5" /></View>
             <View style={styles.menuItemContent}>
               <Text style={styles.menuItemTitle}>Contact Us</Text>
@@ -129,14 +129,14 @@ export default function ProfileScreen() {
 
         <View style={styles.menuSection}>
           <Text style={styles.menuSectionTitle}>Legal</Text>
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(user)/terms')}>
             <View style={styles.menuItemIcon}><Ionicons name="document-text-outline" size={22} color="#4F46E5" /></View>
             <View style={styles.menuItemContent}>
               <Text style={styles.menuItemTitle}>Terms of Service</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color="#6B7280" />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/(user)/privacy')}>
             <View style={styles.menuItemIcon}><Ionicons name="shield-outline" size={22} color="#4F46E5" /></View>
             <View style={styles.menuItemContent}>
               <Text style={styles.menuItemTitle}>Privacy Policy</Text>
@@ -152,6 +152,37 @@ export default function ProfileScreen() {
 
         <Text style={styles.versionText}>Version 1.0.0</Text>
       </ScrollView>
+
+      {/* Logout Modal */}
+      <DarkModal
+        visible={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        title="Logout"
+        message="Are you sure you want to logout?"
+        type="warning"
+        primaryButton={{ text: 'Logout', onPress: confirmLogout, color: '#EF4444' }}
+        secondaryButton={{ text: 'Cancel', onPress: () => setShowLogoutModal(false) }}
+      />
+
+      {/* Success Modal */}
+      <DarkModal
+        visible={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        title="Success"
+        message="Profile updated successfully"
+        type="success"
+        primaryButton={{ text: 'OK', onPress: () => setShowSuccessModal(false) }}
+      />
+
+      {/* Error Modal */}
+      <DarkModal
+        visible={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        title="Error"
+        message={errorMessage}
+        type="error"
+        primaryButton={{ text: 'OK', onPress: () => setShowErrorModal(false) }}
+      />
     </SafeAreaView>
   );
 }
