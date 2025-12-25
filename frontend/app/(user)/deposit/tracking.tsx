@@ -85,6 +85,9 @@ export default function TrackingScreen() {
     switch (status) {
       case 'requested': return { color: '#F59E0B', icon: 'time', label: 'Searching for Agent', description: 'Looking for an available BC agent near you' };
       case 'agent_assigned': return { color: '#3B82F6', icon: 'person', label: 'Agent Assigned', description: 'A BC agent has been assigned and is on the way' };
+      case 'arrived': return { color: '#8B5CF6', icon: 'location', label: 'Agent Arrived', description: 'Agent has arrived at your location' };
+      case 'cash_collected': return { color: '#EC4899', icon: 'cash', label: 'Cash Collected', description: 'Agent has collected your cash' };
+      case 'deposited': return { color: '#06B6D4', icon: 'wallet', label: 'Deposited', description: 'Cash has been deposited to your bank' };
       case 'in_progress': return { color: '#8B5CF6', icon: 'bicycle', label: 'In Progress', description: 'Agent is at your location processing the deposit' };
       case 'completed': return { color: '#10B981', icon: 'checkmark-circle', label: 'Completed', description: 'Your cash has been deposited successfully' };
       case 'cancelled': return { color: '#EF4444', icon: 'close-circle', label: 'Cancelled', description: 'This request has been cancelled' };
