@@ -301,10 +301,6 @@ export default function JobDetailsScreen() {
           <Text style={[styles.lockBannerText, { color: '#06B6D4' }]}>Waiting for customer to confirm deposit receipt.</Text>
         </View>
       )}
-          <Ionicons name="shield-checkmark" size={18} color="#F59E0B" />
-          <Text style={styles.lockBannerText}>Cash collected. Complete the deposit to finish this job.</Text>
-        </View>
-      )}
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* ETA Display - only for assigned status */}
