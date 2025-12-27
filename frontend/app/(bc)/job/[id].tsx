@@ -1,15 +1,16 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Alert,
   ActivityIndicator,
   Linking,
   Platform,
   TextInput,
+  Modal,
+  AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
@@ -17,6 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../../src/services/api';
 
 const RUPEE = '₹';
+const POLL_INTERVAL = 5000; // 5 seconds for job details
 
 interface Job {
   id: string;
@@ -53,24 +55,84 @@ export default function JobDetailsScreen() {
   const [showOtpModal, setShowOtpModal] = useState(false);
   const [otpInput, setOtpInput] = useState('');
   const [otpError, setOtpError] = useState('');
+  
+  // Modal states for dark-themed alerts
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [alertConfig, setAlertConfig] = useState<{
+    type: 'success' | 'error' | 'confirm';
+    title: string;
+    message: string;
+    onConfirm?: () => void;
+    confirmText?: string;
+  }>({ type: 'success', title: '', message: '' });
 
-  // Persist and restore job data on focus
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const appState = useRef(AppState.currentState);
+
+  // Load job on focus and start polling
   useFocusEffect(
     useCallback(() => {
       loadJob();
+      startPolling();
+      
+      return () => {
+        stopPolling();
+      };
     }, [id])
   );
 
-  const loadJob = async () => {
+  // Handle app state changes
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        loadJob();
+        startPolling();
+      } else if (nextAppState.match(/inactive|background/)) {
+        stopPolling();
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  const startPolling = () => {
+    stopPolling();
+    pollIntervalRef.current = setInterval(() => {
+      loadJob(true);
+    }, POLL_INTERVAL);
+  };
+
+  const stopPolling = () => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  };
+
+  const loadJob = async (silent = false) => {
     try {
-      setIsLoading(true);
+      if (!silent) setIsLoading(true);
       const data = await api.getBCJobDetails(id);
       setJob(data);
     } catch (error) {
       console.log('Error loading job:', error);
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
+  };
+
+  const showDarkAlert = (
+    type: 'success' | 'error' | 'confirm',
+    title: string,
+    message: string,
+    onConfirm?: () => void,
+    confirmText?: string
+  ) => {
+    setAlertConfig({ type, title, message, onConfirm, confirmText });
+    setShowAlertModal(true);
   };
 
   const getCurrentStep = () => {
@@ -92,7 +154,15 @@ export default function JobDetailsScreen() {
       return;
     }
 
-    await performStatusUpdate(currentStep.nextStatus);
+    // Show confirmation modal
+    const nextLabel = STATUS_FLOW.find(s => s.key === currentStep.nextStatus)?.label;
+    showDarkAlert(
+      'confirm',
+      'Update Status',
+      `Mark this job as "${nextLabel}"?`,
+      () => performStatusUpdate(currentStep.nextStatus!),
+      'Confirm'
+    );
   };
 
   const handleOtpVerifyAndUpdate = async () => {
@@ -101,7 +171,6 @@ export default function JobDetailsScreen() {
       return;
     }
 
-    // Verify OTP - backend automatically updates status to cash_collected
     setIsUpdating(true);
     try {
       await api.verifyJobOTP(id, otpInput);
@@ -109,7 +178,7 @@ export default function JobDetailsScreen() {
       setOtpInput('');
       setOtpError('');
       loadJob();
-      Alert.alert('Success', 'OTP verified. Cash collection confirmed!');
+      showDarkAlert('success', 'OTP Verified', 'Cash collection confirmed. Please proceed to deposit the cash.');
     } catch (error: any) {
       const message = error.response?.data?.detail || 'Invalid code. Please check with customer.';
       setOtpError(message);
@@ -119,36 +188,23 @@ export default function JobDetailsScreen() {
   };
 
   const performStatusUpdate = async (nextStatus: string) => {
-    const nextLabel = STATUS_FLOW.find(s => s.key === nextStatus)?.label;
-    
-    Alert.alert(
-      'Update Status',
-      `Mark this job as "${nextLabel}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
-          onPress: async () => {
-            setIsUpdating(true);
-            try {
-              if (nextStatus === 'completed') {
-                await api.completeJob(id);
-                Alert.alert('Success', 'Job completed successfully!', [
-                  { text: 'OK', onPress: () => router.back() }
-                ]);
-              } else {
-                await api.updateJobStatus(id, nextStatus);
-                loadJob();
-              }
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.detail || 'Failed to update status');
-            } finally {
-              setIsUpdating(false);
-            }
-          },
-        },
-      ]
-    );
+    setShowAlertModal(false);
+    setIsUpdating(true);
+    try {
+      if (nextStatus === 'completed') {
+        await api.completeJob(id);
+        showDarkAlert('success', 'Job Completed!', `You earned ${RUPEE}${job?.service_fee} for this job.`, () => {
+          router.back();
+        });
+      } else {
+        await api.updateJobStatus(id, nextStatus);
+        loadJob();
+      }
+    } catch (error: any) {
+      showDarkAlert('error', 'Error', error.response?.data?.detail || 'Failed to update status');
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   const openMaps = () => {
@@ -162,7 +218,6 @@ export default function JobDetailsScreen() {
     Linking.openURL(url);
   };
 
-  // Mask phone number for privacy
   const getMaskedPhone = (phone: string) => {
     if (!phone || phone.length < 4) return phone;
     return phone.slice(0, 2) + '****' + phone.slice(-4);
@@ -171,6 +226,14 @@ export default function JobDetailsScreen() {
   const getCurrentStepIndex = () => {
     if (!job) return 0;
     return STATUS_FLOW.findIndex(s => s.key === job.status);
+  };
+
+  const getAlertIcon = () => {
+    switch (alertConfig.type) {
+      case 'success': return { name: 'checkmark-circle', color: '#10B981' };
+      case 'error': return { name: 'close-circle', color: '#EF4444' };
+      default: return { name: 'help-circle', color: '#F59E0B' };
+    }
   };
 
   if (isLoading) {
@@ -201,6 +264,7 @@ export default function JobDetailsScreen() {
   const currentStepIndex = getCurrentStepIndex();
   const currentStep = getCurrentStep();
   const isCompleted = job.status === 'completed';
+  const alertIcon = getAlertIcon();
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -214,32 +278,30 @@ export default function JobDetailsScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Earnings Card - Clear fee label */}
-        <View style={styles.earningsCard}>
-          <View style={styles.earningsIcon}>
-            <Ionicons name="wallet" size={24} color="#10B981" />
+        {/* Clear Fee Breakdown Card */}
+        <View style={styles.breakdownCard}>
+          <Text style={styles.breakdownTitle}>Job Summary</Text>
+          <View style={styles.breakdownRow}>
+            <Text style={styles.breakdownLabel}>Deposit Amount</Text>
+            <Text style={styles.breakdownValue}>{RUPEE}{job.amount.toLocaleString()}</Text>
           </View>
-          <View style={styles.earningsContent}>
-            <Text style={styles.earningsLabel}>Your Earning for This Job</Text>
-            <Text style={styles.earningsValue}>{RUPEE}{job.service_fee}</Text>
+          <View style={styles.breakdownRow}>
+            <Text style={styles.breakdownLabel}>Service Fee (from customer)</Text>
+            <Text style={styles.breakdownValue}>{RUPEE}{job.service_fee}</Text>
           </View>
-        </View>
-
-        {/* Amount Card */}
-        <View style={styles.amountCard}>
-          <View style={styles.amountRow}>
-            <View>
-              <Text style={styles.amountLabel}>Deposit Amount</Text>
-              <Text style={styles.amountValue}>{RUPEE}{job.amount.toLocaleString()}</Text>
-            </View>
+          <View style={styles.breakdownDivider} />
+          <View style={styles.breakdownRow}>
+            <Text style={styles.breakdownLabel}>Total Cash to Collect</Text>
+            <Text style={styles.breakdownTotal}>{RUPEE}{job.total_cash.toLocaleString()}</Text>
           </View>
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total Cash to Collect</Text>
-            <Text style={styles.totalValue}>{RUPEE}{job.total_cash.toLocaleString()}</Text>
+          <View style={styles.earningHighlight}>
+            <Ionicons name="wallet" size={20} color="#10B981" />
+            <Text style={styles.earningHighlightLabel}>Your Earning:</Text>
+            <Text style={styles.earningHighlightValue}>{RUPEE}{job.service_fee}</Text>
           </View>
         </View>
 
-        {/* Customer Info - Masked phone */}
+        {/* Customer Info */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Customer</Text>
           <View style={styles.customerCard}>
@@ -337,7 +399,7 @@ export default function JobDetailsScreen() {
         </View>
       )}
 
-      {/* OTP Verification Modal - Custom styled */}
+      {/* OTP Verification Modal */}
       {showOtpModal && (
         <View style={styles.otpOverlay}>
           <View style={styles.otpContainer}>
@@ -377,6 +439,44 @@ export default function JobDetailsScreen() {
           </View>
         </View>
       )}
+
+      {/* Dark Alert Modal */}
+      <Modal visible={showAlertModal} transparent animationType="fade" onRequestClose={() => setShowAlertModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={[styles.modalIconContainer, { backgroundColor: `${alertIcon.color}15` }]}>
+              <Ionicons name={alertIcon.name as any} size={48} color={alertIcon.color} />
+            </View>
+            <Text style={styles.modalTitle}>{alertConfig.title}</Text>
+            <Text style={styles.modalMessage}>{alertConfig.message}</Text>
+            <View style={styles.modalActions}>
+              {alertConfig.type === 'confirm' && (
+                <TouchableOpacity 
+                  style={styles.modalCancelBtn}
+                  onPress={() => setShowAlertModal(false)}
+                >
+                  <Text style={styles.modalCancelText}>Cancel</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity 
+                style={[
+                  styles.modalConfirmBtn, 
+                  { backgroundColor: alertIcon.color },
+                  alertConfig.type !== 'confirm' && { flex: 1 }
+                ]}
+                onPress={() => {
+                  setShowAlertModal(false);
+                  alertConfig.onConfirm?.();
+                }}
+              >
+                <Text style={styles.modalConfirmText}>
+                  {alertConfig.confirmText || 'OK'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -408,82 +508,114 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '600', color: '#FFFFFF' },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingVertical: 16, paddingBottom: 120 },
-  earningsCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+  // Breakdown Card
+  breakdownCard: {
+    backgroundColor: '#111827',
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.2)',
+    borderColor: '#1F2937',
   },
-  earningsIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: 'rgba(16, 185, 129, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
+  breakdownTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 16,
   },
-  earningsContent: { flex: 1 },
-  earningsLabel: { fontSize: 13, color: '#10B981', marginBottom: 2 },
-  earningsValue: { fontSize: 24, fontWeight: '700', color: '#10B981' },
-  amountCard: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 20,
-  },
-  amountRow: { marginBottom: 16 },
-  amountLabel: { fontSize: 12, color: '#9CA3AF', marginBottom: 4 },
-  amountValue: { fontSize: 28, fontWeight: '700', color: '#FFFFFF' },
-  totalRow: {
+  breakdownRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#1F2937',
+    marginBottom: 12,
   },
-  totalLabel: { fontSize: 14, color: '#9CA3AF' },
-  totalValue: { fontSize: 20, fontWeight: '700', color: '#F59E0B' },
-  section: { marginBottom: 20 },
-  sectionTitle: { fontSize: 14, fontWeight: '600', color: '#9CA3AF', marginBottom: 12 },
+  breakdownLabel: {
+    fontSize: 14,
+    color: '#9CA3AF',
+  },
+  breakdownValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  breakdownTotal: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  breakdownDivider: {
+    height: 1,
+    backgroundColor: '#1F2937',
+    marginVertical: 12,
+  },
+  earningHighlight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    padding: 12,
+    borderRadius: 12,
+    marginTop: 8,
+    gap: 8,
+  },
+  earningHighlightLabel: {
+    fontSize: 14,
+    color: '#10B981',
+    flex: 1,
+  },
+  earningHighlightValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#10B981',
+  },
+  section: { marginBottom: 16 },
+  sectionTitle: { fontSize: 14, fontWeight: '600', color: '#9CA3AF', marginBottom: 8 },
   customerCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
     padding: 16,
+    borderWidth: 1,
+    borderColor: '#1F2937',
   },
   customerInfo: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
   customerDetails: { marginLeft: 12, flex: 1 },
-  customerName: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  customerName: { fontSize: 18, fontWeight: '600', color: '#FFFFFF' },
   customerMobile: { fontSize: 14, color: '#9CA3AF', marginTop: 2 },
   callNote: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#1F2937',
+    padding: 10,
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 6,
+    gap: 8,
   },
-  callNoteText: { fontSize: 12, color: '#9CA3AF' },
-  locationCard: { backgroundColor: '#111827', borderRadius: 16, padding: 16 },
-  locationInfo: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
-  locationText: { flex: 1, fontSize: 14, color: '#FFFFFF', marginLeft: 12, lineHeight: 20 },
+  callNoteText: { fontSize: 13, color: '#9CA3AF' },
+  locationCard: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#1F2937',
+  },
+  locationInfo: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  locationText: { fontSize: 14, color: '#FFFFFF', marginLeft: 12, flex: 1 },
   navigateButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    borderRadius: 12,
     paddingVertical: 12,
+    borderRadius: 12,
+    gap: 8,
   },
-  navigateText: { fontSize: 14, fontWeight: '600', color: '#10B981', marginLeft: 8 },
-  progressCard: { backgroundColor: '#111827', borderRadius: 16, padding: 20 },
-  progressStep: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 },
+  navigateText: { fontSize: 14, fontWeight: '600', color: '#10B981' },
+  progressCard: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#1F2937',
+  },
+  progressStep: { flexDirection: 'row', alignItems: 'flex-start' },
   progressLeft: { alignItems: 'center', marginRight: 12 },
   progressDot: {
     width: 24,
@@ -494,20 +626,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   progressDotComplete: { backgroundColor: '#10B981' },
-  progressDotCurrent: { backgroundColor: '#F59E0B' },
-  progressLine: { width: 2, height: 24, backgroundColor: '#374151', marginTop: 4 },
+  progressDotCurrent: { backgroundColor: '#4F46E5', borderWidth: 3, borderColor: 'rgba(79, 70, 229, 0.3)' },
+  progressLine: { width: 2, height: 24, backgroundColor: '#374151', marginVertical: 4 },
   progressLineComplete: { backgroundColor: '#10B981' },
   progressLabel: { fontSize: 14, color: '#6B7280', paddingTop: 2 },
-  progressLabelActive: { color: '#FFFFFF', fontWeight: '500' },
+  progressLabelActive: { color: '#FFFFFF', fontWeight: '600' },
   bottomAction: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
+    padding: 20,
     backgroundColor: '#0A0F1C',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    paddingBottom: 32,
     borderTopWidth: 1,
     borderTopColor: '#1F2937',
   },
@@ -516,29 +646,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#10B981',
-    borderRadius: 12,
     paddingVertical: 16,
+    borderRadius: 16,
     gap: 8,
   },
-  actionButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  actionButtonText: { fontSize: 18, fontWeight: '700', color: '#FFFFFF' },
   completedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    borderRadius: 12,
     paddingVertical: 16,
+    borderRadius: 16,
     gap: 8,
   },
-  completedText: { fontSize: 16, fontWeight: '600', color: '#10B981' },
-  // OTP Modal styles
+  completedText: { fontSize: 18, fontWeight: '700', color: '#10B981' },
+  // OTP Modal
   otpOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 20,
@@ -554,9 +684,9 @@ const styles = StyleSheet.create({
     borderColor: '#1F2937',
   },
   otpIconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     backgroundColor: 'rgba(16, 185, 129, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -565,37 +695,105 @@ const styles = StyleSheet.create({
   otpTitle: { fontSize: 20, fontWeight: '700', color: '#FFFFFF', marginBottom: 8 },
   otpMessage: { fontSize: 14, color: '#9CA3AF', textAlign: 'center', marginBottom: 20 },
   otpInput: {
+    width: '100%',
     backgroundColor: '#1F2937',
     borderRadius: 12,
-    paddingHorizontal: 20,
     paddingVertical: 16,
-    fontSize: 24,
+    paddingHorizontal: 20,
+    fontSize: 32,
     fontWeight: '700',
     color: '#FFFFFF',
     textAlign: 'center',
     letterSpacing: 12,
-    width: '100%',
     borderWidth: 1,
     borderColor: '#374151',
   },
-  otpErrorText: { fontSize: 13, color: '#EF4444', marginTop: 8 },
-  otpHint: { fontSize: 11, color: '#6B7280', marginTop: 8 },
-  otpActions: { flexDirection: 'row', gap: 12, width: '100%', marginTop: 20 },
+  otpErrorText: { color: '#EF4444', fontSize: 13, marginTop: 8 },
+  otpHint: { color: '#6B7280', fontSize: 12, marginTop: 8, marginBottom: 16 },
+  otpActions: { flexDirection: 'row', gap: 12, width: '100%' },
   otpCancelBtn: {
     flex: 1,
     backgroundColor: '#1F2937',
-    borderRadius: 12,
     paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
   },
   otpCancelText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
   otpConfirmBtn: {
     flex: 1,
     backgroundColor: '#10B981',
-    borderRadius: 12,
     paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
   },
-  otpConfirmDisabled: { backgroundColor: '#374151' },
+  otpConfirmDisabled: { opacity: 0.5 },
   otpConfirmText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
+  // Alert Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  modalContainer: {
+    backgroundColor: '#111827',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#1F2937',
+  },
+  modalIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  modalCancelBtn: {
+    flex: 1,
+    backgroundColor: '#1F2937',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalCancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  modalConfirmBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalConfirmText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
 });
