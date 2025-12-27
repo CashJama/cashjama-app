@@ -42,7 +42,8 @@ const STATUS_FLOW = [
   { key: 'agent_assigned', label: 'Assigned', nextAction: 'Mark Arrived', nextStatus: 'arrived' },
   { key: 'arrived', label: 'Arrived', nextAction: 'Verify & Collect Cash', nextStatus: 'cash_collected', requiresOtp: true },
   { key: 'cash_collected', label: 'Cash Collected', nextAction: 'Mark Deposited', nextStatus: 'deposited' },
-  { key: 'deposited', label: 'Deposited', nextAction: 'Complete Job', nextStatus: 'completed' },
+  { key: 'deposited', label: 'Deposited', nextAction: 'Submit for Confirmation', nextStatus: 'awaiting_confirmation' },
+  { key: 'awaiting_confirmation', label: 'Awaiting User Confirmation', nextAction: null, nextStatus: null },
   { key: 'completed', label: 'Completed', nextAction: null, nextStatus: null },
 ];
 
