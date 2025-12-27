@@ -232,7 +232,7 @@ export default function BCHomeScreen() {
                     <Text style={styles.amount}>{RUPEE}{job.amount.toLocaleString()}</Text>
                   </View>
                   <View style={styles.feeContainer}>
-                    <Text style={styles.feeLabel}>Your Fee</Text>
+                    <Text style={styles.feeLabel}>Your Earning</Text>
                     <Text style={styles.fee}>{RUPEE}{job.service_fee}</Text>
                   </View>
                 </View>
