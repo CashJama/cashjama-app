@@ -338,28 +338,7 @@ export default function JobDetailsScreen() {
         </View>
       )}
 
-      {/* OTP Verification Modal */}
-      <DarkModal
-        visible={showOtpModal}
-        onClose={() => setShowOtpModal(false)}
-        title="Enter Customer Code"
-        message="Ask the customer for their 4-digit verification code shown on their app."
-        type="info"
-        icon="key"
-        iconColor="#10B981"
-        primaryButton={{
-          text: isUpdating ? 'Verifying...' : 'Verify & Continue',
-          onPress: handleOtpVerifyAndUpdate,
-          loading: isUpdating,
-          color: '#10B981'
-        }}
-        secondaryButton={{
-          text: 'Cancel',
-          onPress: () => setShowOtpModal(false)
-        }}
-      />
-      
-      {/* Custom OTP Input (shown when modal is open) */}
+      {/* OTP Verification Modal - Custom styled */}
       {showOtpModal && (
         <View style={styles.otpOverlay}>
           <View style={styles.otpContainer}>
