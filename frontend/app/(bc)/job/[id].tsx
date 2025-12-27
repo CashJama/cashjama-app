@@ -432,8 +432,11 @@ export default function JobDetailsScreen() {
             <View style={styles.otpIconContainer}>
               <Ionicons name="key" size={48} color="#10B981" />
             </View>
-            <Text style={styles.otpTitle}>Enter Customer Code</Text>
-            <Text style={styles.otpMessage}>Ask the customer for their 4-digit verification code.</Text>
+            <Text style={styles.otpTitle}>Verify & Collect Cash</Text>
+            <View style={styles.otpInstructions}>
+              <Text style={styles.otpInstructionText}>1. Collect CASH from customer first</Text>
+              <Text style={styles.otpInstructionText}>2. Then ask for 4-digit code</Text>
+            </View>
             <TextInput
               style={styles.otpInput}
               value={otpInput}
@@ -445,6 +448,7 @@ export default function JobDetailsScreen() {
               autoFocus
             />
             {otpError ? <Text style={styles.otpErrorText}>{otpError}</Text> : null}
+            <Text style={styles.otpWarning}>⚠️ After verification, you MUST complete the deposit</Text>
             <Text style={styles.otpHint}>Dev Mode: Use code "1234"</Text>
             <View style={styles.otpActions}>
               <TouchableOpacity style={styles.otpCancelBtn} onPress={() => setShowOtpModal(false)}>
