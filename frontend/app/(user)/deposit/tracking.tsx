@@ -99,10 +99,13 @@ export default function TrackingScreen() {
     const steps = [
       { key: 'requested', label: 'Request Placed', time: deposit?.created_at },
       { key: 'agent_assigned', label: 'Agent Assigned', time: deposit?.assigned_at },
-      { key: 'in_progress', label: 'In Progress', time: deposit?.started_at },
+      { key: 'arrived', label: 'Agent Arrived', time: null },
+      { key: 'cash_collected', label: 'Cash Collected', time: null },
+      { key: 'deposited', label: 'Deposited', time: null },
       { key: 'completed', label: 'Completed', time: deposit?.completed_at },
     ];
-    const currentIndex = steps.findIndex((s) => s.key === deposit?.status);
+    const statusOrder = ['requested', 'agent_assigned', 'arrived', 'cash_collected', 'deposited', 'completed'];
+    const currentIndex = statusOrder.indexOf(deposit?.status || 'requested');
     return steps.map((step, index) => ({ ...step, isCompleted: index <= currentIndex, isCurrent: index === currentIndex }));
   };
 
