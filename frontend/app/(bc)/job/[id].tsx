@@ -750,8 +750,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 16,
   },
-  otpTitle: { fontSize: 20, fontWeight: '700', color: '#FFFFFF', marginBottom: 8 },
-  otpMessage: { fontSize: 14, color: '#9CA3AF', textAlign: 'center', marginBottom: 20 },
+  otpTitle: { fontSize: 20, fontWeight: '700', color: '#FFFFFF', marginBottom: 12 },
+  otpInstructions: { width: '100%', marginBottom: 16 },
+  otpInstructionText: { fontSize: 14, color: '#10B981', fontWeight: '600', marginBottom: 6 },
   otpInput: {
     width: '100%',
     backgroundColor: '#1F2937',
@@ -767,7 +768,8 @@ const styles = StyleSheet.create({
     borderColor: '#374151',
   },
   otpErrorText: { color: '#EF4444', fontSize: 13, marginTop: 8 },
-  otpHint: { color: '#6B7280', fontSize: 12, marginTop: 8, marginBottom: 16 },
+  otpWarning: { color: '#F59E0B', fontSize: 12, marginTop: 12, textAlign: 'center', fontWeight: '500' },
+  otpHint: { color: '#6B7280', fontSize: 12, marginTop: 4, marginBottom: 16 },
   otpActions: { flexDirection: 'row', gap: 12, width: '100%' },
   otpCancelBtn: {
     flex: 1,
