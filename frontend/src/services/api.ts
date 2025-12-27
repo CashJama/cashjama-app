@@ -1,6 +1,10 @@
 import axios, { AxiosInstance } from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
+
+// Callback for auth expiry - will be set by AuthContext
+let onAuthExpiry: (() => void) | null = null;
 
 class ApiService {
   private instance: AxiosInstance;
@@ -28,13 +32,20 @@ class ApiService {
       }
     );
 
-    // Response interceptor
+    // Response interceptor with better 401 handling
     this.instance.interceptors.response.use(
       (response) => response,
-      (error) => {
+      async (error) => {
         if (error.response?.status === 401) {
-          // Token expired - will be handled by AuthContext
-          console.log('Auth error - token may be expired');
+          console.log('Auth error - token expired, clearing auth state');
+          // Clear stored auth
+          await AsyncStorage.removeItem('auth_token');
+          await AsyncStorage.removeItem('auth_user');
+          this.authToken = null;
+          // Trigger auth expiry callback if set
+          if (onAuthExpiry) {
+            onAuthExpiry();
+          }
         }
         return Promise.reject(error);
       }
@@ -43,6 +54,10 @@ class ApiService {
 
   setAuthToken(token: string | null) {
     this.authToken = token;
+  }
+
+  setOnAuthExpiry(callback: () => void) {
+    onAuthExpiry = callback;
   }
 
   // Auth endpoints
