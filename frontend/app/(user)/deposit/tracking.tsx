@@ -57,7 +57,12 @@ export default function TrackingScreen() {
 
   useFocusEffect(useCallback(() => {
     fetchDeposit();
-    const interval = setInterval(() => { if (deposit && ['requested', 'agent_assigned', 'arrived', 'cash_collected', 'deposited', 'in_progress'].includes(deposit.status)) { fetchDeposit(); } }, 15000);
+    // Poll every 5 seconds for real-time status updates from BC
+    const interval = setInterval(() => { 
+      if (deposit && ['requested', 'agent_assigned', 'arrived', 'cash_collected', 'deposited'].includes(deposit.status)) { 
+        fetchDeposit(); 
+      } 
+    }, 5000);
     return () => clearInterval(interval);
   }, [deposit?.status]));
 
