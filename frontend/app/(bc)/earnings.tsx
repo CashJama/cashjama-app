@@ -6,6 +6,8 @@ import {
   ScrollView,
   RefreshControl,
   ActivityIndicator,
+  TouchableOpacity,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from 'expo-router';
@@ -25,9 +27,14 @@ interface CompletedJob {
   id: string;
   amount: number;
   service_fee: number;
+  total_cash: number;
   status: string;
   completed_at?: string;
   created_at: string;
+  user_name?: string;
+  location?: {
+    address?: string;
+  };
 }
 
 export default function EarningsScreen() {
@@ -35,6 +42,8 @@ export default function EarningsScreen() {
   const [completedJobs, setCompletedJobs] = useState<CompletedJob[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<CompletedJob | null>(null);
+  const [showJobDetail, setShowJobDetail] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -73,8 +82,17 @@ export default function EarningsScreen() {
     return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
   };
 
+  const formatDateTime = (dateStr: string) => {
+    return `${formatDate(dateStr)} • ${formatTime(dateStr)}`;
+  };
+
   const getShortJobId = (id: string) => {
     return id.slice(0, 8).toUpperCase();
+  };
+
+  const openJobDetail = (job: CompletedJob) => {
+    setSelectedJob(job);
+    setShowJobDetail(true);
   };
 
   if (isLoading) {
@@ -129,9 +147,11 @@ export default function EarningsScreen() {
           </View>
         </View>
 
-        {/* Job History */}
+        {/* Job History Section */}
         <View style={styles.historySection}>
           <Text style={styles.sectionTitle}>Job History</Text>
+          <Text style={styles.sectionSubtitle}>Tap a job to view details</Text>
+          
           {completedJobs.length === 0 ? (
             <View style={styles.emptyState}>
               <Ionicons name="briefcase-outline" size={48} color="#374151" />
@@ -140,45 +160,114 @@ export default function EarningsScreen() {
             </View>
           ) : (
             completedJobs.map((job) => (
-              <View key={job.id} style={styles.jobCard}>
-                <View style={styles.jobHeader}>
-                  <View style={styles.jobIdBadge}>
-                    <Text style={styles.jobIdText}>#{getShortJobId(job.id)}</Text>
-                  </View>
-                  <View style={styles.completedBadge}>
-                    <Ionicons name="checkmark-circle" size={14} color="#10B981" />
-                    <Text style={styles.completedText}>Completed</Text>
-                  </View>
+              <TouchableOpacity 
+                key={job.id} 
+                style={styles.jobCard}
+                onPress={() => openJobDetail(job)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.jobCardLeft}>
+                  <Text style={styles.jobIdText}>#{getShortJobId(job.id)}</Text>
+                  <Text style={styles.jobDateText}>{formatDate(job.completed_at || job.created_at)}</Text>
                 </View>
-                <View style={styles.jobDetails}>
-                  <View style={styles.jobRow}>
-                    <Text style={styles.jobLabel}>Deposit Amount</Text>
-                    <Text style={styles.jobValue}>{RUPEE}{job.amount.toLocaleString()}</Text>
-                  </View>
-                  <View style={styles.jobRow}>
-                    <Text style={styles.jobLabel}>Your Earning</Text>
-                    <Text style={styles.jobEarning}>{RUPEE}{job.service_fee}</Text>
-                  </View>
-                  <View style={styles.jobRow}>
-                    <Text style={styles.jobLabel}>Date & Time</Text>
-                    <Text style={styles.jobDate}>
-                      {formatDate(job.completed_at || job.created_at)} • {formatTime(job.completed_at || job.created_at)}
-                    </Text>
-                  </View>
+                <View style={styles.jobCardRight}>
+                  <Text style={styles.jobEarningText}>{RUPEE}{job.service_fee}</Text>
+                  <Ionicons name="chevron-forward" size={18} color="#6B7280" />
                 </View>
-              </View>
+              </TouchableOpacity>
             ))
           )}
         </View>
-
-        {/* Info note */}
-        <View style={styles.infoNote}>
-          <Ionicons name="information-circle" size={20} color="#4F46E5" />
-          <Text style={styles.infoNoteText}>
-            Earnings are credited after each completed job. Platform commission is handled separately.
-          </Text>
-        </View>
       </ScrollView>
+
+      {/* Job Detail Modal */}
+      <Modal 
+        visible={showJobDetail} 
+        transparent 
+        animationType="slide"
+        onRequestClose={() => setShowJobDetail(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Job Details</Text>
+              <TouchableOpacity 
+                style={styles.modalCloseButton}
+                onPress={() => setShowJobDetail(false)}
+              >
+                <Ionicons name="close" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            {selectedJob && (
+              <ScrollView style={styles.modalContent}>
+                {/* Job ID Badge */}
+                <View style={styles.detailJobIdContainer}>
+                  <View style={styles.detailJobIdBadge}>
+                    <Text style={styles.detailJobIdText}>#{getShortJobId(selectedJob.id)}</Text>
+                  </View>
+                  <View style={styles.completedBadge}>
+                    <Ionicons name="checkmark-circle" size={16} color="#10B981" />
+                    <Text style={styles.completedBadgeText}>Completed</Text>
+                  </View>
+                </View>
+
+                {/* Amount Breakdown */}
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailSectionTitle}>Amount Details</Text>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Deposit Amount</Text>
+                    <Text style={styles.detailValue}>{RUPEE}{selectedJob.amount.toLocaleString()}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Service Fee</Text>
+                    <Text style={styles.detailValue}>{RUPEE}{selectedJob.service_fee}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Total Cash Collected</Text>
+                    <Text style={styles.detailValue}>{RUPEE}{selectedJob.total_cash?.toLocaleString() || (selectedJob.amount + selectedJob.service_fee).toLocaleString()}</Text>
+                  </View>
+                  <View style={styles.detailDivider} />
+                  <View style={styles.detailEarningRow}>
+                    <Text style={styles.detailEarningLabel}>Your Earning</Text>
+                    <Text style={styles.detailEarningValue}>{RUPEE}{selectedJob.service_fee}</Text>
+                  </View>
+                </View>
+
+                {/* Date & Time */}
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailSectionTitle}>Date & Time</Text>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Completed</Text>
+                    <Text style={styles.detailValue}>{formatDateTime(selectedJob.completed_at || selectedJob.created_at)}</Text>
+                  </View>
+                </View>
+
+                {/* Location */}
+                {selectedJob.location?.address && (
+                  <View style={styles.detailSection}>
+                    <Text style={styles.detailSectionTitle}>Location</Text>
+                    <Text style={styles.detailLocationText}>{selectedJob.location.address}</Text>
+                  </View>
+                )}
+
+                {/* Full Job ID */}
+                <View style={styles.detailSection}>
+                  <Text style={styles.detailSectionTitle}>Reference</Text>
+                  <Text style={styles.detailRefText}>{selectedJob.id}</Text>
+                </View>
+              </ScrollView>
+            )}
+
+            <TouchableOpacity 
+              style={styles.modalDoneButton}
+              onPress={() => setShowJobDetail(false)}
+            >
+              <Text style={styles.modalDoneText}>Done</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -260,6 +349,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
     marginBottom: 16,
   },
   emptyState: {
@@ -279,82 +373,177 @@ const styles = StyleSheet.create({
     color: '#4B5563',
     marginTop: 4,
   },
+  // Simplified job cards for list view
   jobCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#111827',
-    borderRadius: 16,
+    borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: '#1F2937',
   },
-  jobHeader: {
+  jobCardLeft: {},
+  jobIdText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  jobDateText: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  jobCardRight: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-    paddingBottom: 12,
+    gap: 8,
+  },
+  jobEarningText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#10B981',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: '#111827',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#1F2937',
   },
-  jobIdBadge: {
-    backgroundColor: '#1F2937',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
-  jobIdText: {
-    fontSize: 12,
+  modalCloseButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#1F2937',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalContent: {
+    padding: 20,
+  },
+  detailJobIdContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  detailJobIdBadge: {
+    backgroundColor: '#1F2937',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  detailJobIdText: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#9CA3AF',
+    color: '#FFFFFF',
     fontFamily: 'monospace',
   },
   completedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    gap: 6,
   },
-  completedText: {
-    fontSize: 12,
+  completedBadgeText: {
+    fontSize: 13,
     fontWeight: '600',
     color: '#10B981',
   },
-  jobDetails: {},
-  jobRow: {
+  detailSection: {
+    backgroundColor: '#1F2937',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  detailSectionTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#9CA3AF',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
-  jobLabel: {
+  detailLabel: {
     fontSize: 14,
     color: '#9CA3AF',
   },
-  jobValue: {
+  detailValue: {
     fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
   },
-  jobEarning: {
-    fontSize: 16,
+  detailDivider: {
+    height: 1,
+    backgroundColor: '#374151',
+    marginVertical: 12,
+  },
+  detailEarningRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  detailEarningLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#10B981',
+  },
+  detailEarningValue: {
+    fontSize: 20,
     fontWeight: '700',
     color: '#10B981',
   },
-  jobDate: {
-    fontSize: 13,
+  detailLocationText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    lineHeight: 20,
+  },
+  detailRefText: {
+    fontSize: 12,
     color: '#6B7280',
+    fontFamily: 'monospace',
   },
-  infoNote: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+  modalDoneButton: {
+    backgroundColor: '#10B981',
+    margin: 20,
+    marginTop: 0,
+    paddingVertical: 16,
     borderRadius: 12,
-    padding: 14,
+    alignItems: 'center',
   },
-  infoNoteText: {
-    flex: 1,
-    fontSize: 13,
-    color: '#A5B4FC',
-    marginLeft: 12,
-    lineHeight: 18,
+  modalDoneText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
