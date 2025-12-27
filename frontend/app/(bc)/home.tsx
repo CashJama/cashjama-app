@@ -164,6 +164,7 @@ export default function BCHomeScreen() {
       arrived: 'Arrived',
       cash_collected: 'Cash Collected',
       deposited: 'Deposited',
+      awaiting_confirmation: 'Awaiting User',
     };
     return labels[status] || status;
   };
@@ -174,6 +175,7 @@ export default function BCHomeScreen() {
       arrived: '#8B5CF6',
       cash_collected: '#EC4899',
       deposited: '#10B981',
+      awaiting_confirmation: '#06B6D4',
     };
     return colors[status] || '#6B7280';
   };
