@@ -93,7 +93,7 @@ export default function TrackingScreen() {
       case 'arrived': return { color: '#8B5CF6', icon: 'location', label: 'Agent Arrived', description: 'Agent has arrived at your location' };
       case 'cash_collected': return { color: '#EC4899', icon: 'cash', label: 'Cash Collected', description: 'Agent has collected your cash' };
       case 'deposited': return { color: '#06B6D4', icon: 'wallet', label: 'Deposited', description: 'Cash has been deposited to your bank' };
-      case 'in_progress': return { color: '#8B5CF6', icon: 'bicycle', label: 'In Progress', description: 'Agent is at your location processing the deposit' };
+      case 'awaiting_confirmation': return { color: '#F59E0B', icon: 'checkmark-done', label: 'Awaiting Your Confirmation', description: 'BC has deposited the cash. Please confirm to complete.' };
       case 'completed': return { color: '#10B981', icon: 'checkmark-circle', label: 'Completed', description: 'Your cash has been deposited successfully' };
       case 'cancelled': return { color: '#EF4444', icon: 'close-circle', label: 'Cancelled', description: 'This request has been cancelled' };
       default: return { color: '#6B7280', icon: 'help-circle', label: status, description: '' };
@@ -107,9 +107,10 @@ export default function TrackingScreen() {
       { key: 'arrived', label: 'Agent Arrived', time: null },
       { key: 'cash_collected', label: 'Cash Collected', time: null },
       { key: 'deposited', label: 'Deposited', time: null },
+      { key: 'awaiting_confirmation', label: 'Awaiting Confirmation', time: null },
       { key: 'completed', label: 'Completed', time: deposit?.completed_at },
     ];
-    const statusOrder = ['requested', 'agent_assigned', 'arrived', 'cash_collected', 'deposited', 'completed'];
+    const statusOrder = ['requested', 'agent_assigned', 'arrived', 'cash_collected', 'deposited', 'awaiting_confirmation', 'completed'];
     const currentIndex = statusOrder.indexOf(deposit?.status || 'requested');
     return steps.map((step, index) => ({ ...step, isCompleted: index <= currentIndex, isCurrent: index === currentIndex }));
   };
