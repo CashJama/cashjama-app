@@ -449,7 +449,6 @@ export default function JobDetailsScreen() {
             />
             {otpError ? <Text style={styles.otpErrorText}>{otpError}</Text> : null}
             <Text style={styles.otpWarning}>⚠️ After verification, you MUST complete the deposit</Text>
-            <Text style={styles.otpHint}>Dev Mode: Use code "1234"</Text>
             <View style={styles.otpActions}>
               <TouchableOpacity style={styles.otpCancelBtn} onPress={() => setShowOtpModal(false)}>
                 <Text style={styles.otpCancelText}>Cancel</Text>
