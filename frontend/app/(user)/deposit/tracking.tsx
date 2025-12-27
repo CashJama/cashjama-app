@@ -36,6 +36,8 @@ export default function TrackingScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   // Handle back navigation based on where user came from
   const handleBack = () => {
@@ -51,6 +53,25 @@ export default function TrackingScreen() {
     try { const response = await api.getDepositDetails(depositId || ''); setDeposit(response); }
     catch (error) { console.error('Error fetching deposit:', error); Alert.alert('Error', 'Failed to load deposit details'); }
     finally { setIsLoading(false); }
+  };
+
+  const handleConfirmDeposit = () => {
+    setShowConfirmModal(true);
+  };
+
+  const confirmDepositReceived = async () => {
+    setIsConfirming(true);
+    try {
+      await api.confirmDeposit(depositId || '');
+      setShowConfirmModal(false);
+      Alert.alert('Success', 'Deposit confirmed! Thank you for using CashJama.', [
+        { text: 'OK', onPress: () => router.push('/(user)/home') }
+      ]);
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.detail || 'Failed to confirm deposit');
+    } finally {
+      setIsConfirming(false);
+    }
   };
 
   useEffect(() => { fetchDeposit(); }, [depositId]);
