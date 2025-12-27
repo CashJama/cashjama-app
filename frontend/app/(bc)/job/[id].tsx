@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,11 +9,13 @@ import {
   ActivityIndicator,
   Linking,
   Platform,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '../../../src/services/api';
+import DarkModal from '../../../src/components/DarkModal';
 
 const RUPEE = '₹';
 
@@ -36,11 +38,11 @@ interface Job {
 }
 
 const STATUS_FLOW = [
-  { key: 'agent_assigned', label: 'Assigned', nextAction: 'Mark Arrived' },
-  { key: 'arrived', label: 'Arrived', nextAction: 'Mark Cash Collected' },
-  { key: 'cash_collected', label: 'Cash Collected', nextAction: 'Mark Deposited' },
-  { key: 'deposited', label: 'Deposited', nextAction: 'Complete Job' },
-  { key: 'completed', label: 'Completed', nextAction: null },
+  { key: 'agent_assigned', label: 'Assigned', nextAction: 'Mark Arrived', nextStatus: 'arrived' },
+  { key: 'arrived', label: 'Arrived', nextAction: 'Verify & Collect Cash', nextStatus: 'cash_collected', requiresOtp: true },
+  { key: 'cash_collected', label: 'Cash Collected', nextAction: 'Mark Deposited', nextStatus: 'deposited' },
+  { key: 'deposited', label: 'Deposited', nextAction: 'Complete Job', nextStatus: 'completed' },
+  { key: 'completed', label: 'Completed', nextAction: null, nextStatus: null },
 ];
 
 export default function JobDetailsScreen() {
@@ -49,44 +51,80 @@ export default function JobDetailsScreen() {
   const [job, setJob] = useState<Job | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showOtpModal, setShowOtpModal] = useState(false);
+  const [otpInput, setOtpInput] = useState('');
+  const [otpError, setOtpError] = useState('');
 
-  useEffect(() => {
-    loadJob();
-  }, [id]);
+  // Persist and restore job data on focus
+  useFocusEffect(
+    useCallback(() => {
+      loadJob();
+    }, [id])
+  );
 
   const loadJob = async () => {
     try {
+      setIsLoading(true);
       const data = await api.getBCJobDetails(id);
       setJob(data);
     } catch (error) {
       console.log('Error loading job:', error);
-      Alert.alert('Error', 'Failed to load job details');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getNextStatus = (currentStatus: string) => {
-    const statusMap: Record<string, string> = {
-      agent_assigned: 'arrived',
-      arrived: 'cash_collected',
-      cash_collected: 'deposited',
-      deposited: 'completed',
-    };
-    return statusMap[currentStatus];
+  const getCurrentStep = () => {
+    if (!job) return null;
+    return STATUS_FLOW.find(s => s.key === job.status);
   };
 
   const handleUpdateStatus = async () => {
     if (!job) return;
     
-    const nextStatus = getNextStatus(job.status);
-    if (!nextStatus) return;
+    const currentStep = getCurrentStep();
+    if (!currentStep?.nextStatus) return;
 
-    const currentStep = STATUS_FLOW.find(s => s.key === job.status);
+    // If OTP verification is required for this step
+    if (currentStep.requiresOtp) {
+      setShowOtpModal(true);
+      setOtpInput('');
+      setOtpError('');
+      return;
+    }
+
+    await performStatusUpdate(currentStep.nextStatus);
+  };
+
+  const handleOtpVerifyAndUpdate = async () => {
+    if (otpInput.length !== 4) {
+      setOtpError('Please enter the 4-digit code from customer');
+      return;
+    }
+
+    // Verify OTP first
+    setIsUpdating(true);
+    try {
+      await api.verifyJobOTP(id, otpInput);
+      setShowOtpModal(false);
+      // Now update status to cash_collected
+      await api.updateJobStatus(id, 'cash_collected');
+      loadJob();
+      Alert.alert('Success', 'OTP verified. Cash collection confirmed!');
+    } catch (error: any) {
+      const message = error.response?.data?.detail || 'Invalid code. Please check with customer.';
+      setOtpError(message);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const performStatusUpdate = async (nextStatus: string) => {
+    const nextLabel = STATUS_FLOW.find(s => s.key === nextStatus)?.label;
     
     Alert.alert(
       'Update Status',
-      `Mark this job as "${STATUS_FLOW.find(s => s.key === nextStatus)?.label}"?`,
+      `Mark this job as "${nextLabel}"?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -125,9 +163,10 @@ export default function JobDetailsScreen() {
     Linking.openURL(url);
   };
 
-  const callCustomer = () => {
-    if (!job) return;
-    Linking.openURL(`tel:${job.user_mobile}`);
+  // Mask phone number for privacy
+  const getMaskedPhone = (phone: string) => {
+    if (!phone || phone.length < 4) return phone;
+    return phone.slice(0, 2) + '****' + phone.slice(-4);
   };
 
   const getCurrentStepIndex = () => {
@@ -140,6 +179,7 @@ export default function JobDetailsScreen() {
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#10B981" />
+          <Text style={styles.loadingText}>Loading job...</Text>
         </View>
       </SafeAreaView>
     );
@@ -149,6 +189,7 @@ export default function JobDetailsScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.loadingContainer}>
+          <Ionicons name="alert-circle" size={48} color="#EF4444" />
           <Text style={styles.errorText}>Job not found</Text>
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
             <Text style={styles.backBtnText}>Go Back</Text>
@@ -159,7 +200,7 @@ export default function JobDetailsScreen() {
   }
 
   const currentStepIndex = getCurrentStepIndex();
-  const currentStep = STATUS_FLOW[currentStepIndex];
+  const currentStep = getCurrentStep();
   const isCompleted = job.status === 'completed';
 
   return (
@@ -174,16 +215,23 @@ export default function JobDetailsScreen() {
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* Earnings Card - Clear fee label */}
+        <View style={styles.earningsCard}>
+          <View style={styles.earningsIcon}>
+            <Ionicons name="wallet" size={24} color="#10B981" />
+          </View>
+          <View style={styles.earningsContent}>
+            <Text style={styles.earningsLabel}>Your Earning for This Job</Text>
+            <Text style={styles.earningsValue}>{RUPEE}{job.service_fee}</Text>
+          </View>
+        </View>
+
         {/* Amount Card */}
         <View style={styles.amountCard}>
           <View style={styles.amountRow}>
             <View>
               <Text style={styles.amountLabel}>Deposit Amount</Text>
               <Text style={styles.amountValue}>{RUPEE}{job.amount.toLocaleString()}</Text>
-            </View>
-            <View style={styles.feeBox}>
-              <Text style={styles.feeLabel}>Your Fee</Text>
-              <Text style={styles.feeValue}>{RUPEE}{job.service_fee}</Text>
             </View>
           </View>
           <View style={styles.totalRow}>
@@ -192,7 +240,7 @@ export default function JobDetailsScreen() {
           </View>
         </View>
 
-        {/* Customer Info */}
+        {/* Customer Info - Masked phone */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Customer</Text>
           <View style={styles.customerCard}>
@@ -200,12 +248,13 @@ export default function JobDetailsScreen() {
               <Ionicons name="person-circle" size={48} color="#4F46E5" />
               <View style={styles.customerDetails}>
                 <Text style={styles.customerName}>{job.user_name || 'Customer'}</Text>
-                <Text style={styles.customerMobile}>{job.user_mobile}</Text>
+                <Text style={styles.customerMobile}>{getMaskedPhone(job.user_mobile)}</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.callButton} onPress={callCustomer}>
-              <Ionicons name="call" size={20} color="#FFFFFF" />
-            </TouchableOpacity>
+            <View style={styles.callNote}>
+              <Ionicons name="shield-checkmark" size={16} color="#9CA3AF" />
+              <Text style={styles.callNoteText}>Contact via app only</Text>
+            </View>
           </View>
         </View>
 
@@ -272,7 +321,7 @@ export default function JobDetailsScreen() {
               <ActivityIndicator color="#FFFFFF" />
             ) : (
               <>
-                <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
+                <Ionicons name={currentStep.requiresOtp ? "key" : "checkmark-circle"} size={24} color="#FFFFFF" />
                 <Text style={styles.actionButtonText}>{currentStep.nextAction}</Text>
               </>
             )}
@@ -288,6 +337,68 @@ export default function JobDetailsScreen() {
           </View>
         </View>
       )}
+
+      {/* OTP Verification Modal */}
+      <DarkModal
+        visible={showOtpModal}
+        onClose={() => setShowOtpModal(false)}
+        title="Enter Customer Code"
+        message="Ask the customer for their 4-digit verification code shown on their app."
+        type="info"
+        icon="key"
+        iconColor="#10B981"
+        primaryButton={{
+          text: isUpdating ? 'Verifying...' : 'Verify & Continue',
+          onPress: handleOtpVerifyAndUpdate,
+          loading: isUpdating,
+          color: '#10B981'
+        }}
+        secondaryButton={{
+          text: 'Cancel',
+          onPress: () => setShowOtpModal(false)
+        }}
+      />
+      
+      {/* Custom OTP Input (shown when modal is open) */}
+      {showOtpModal && (
+        <View style={styles.otpOverlay}>
+          <View style={styles.otpContainer}>
+            <View style={styles.otpIconContainer}>
+              <Ionicons name="key" size={48} color="#10B981" />
+            </View>
+            <Text style={styles.otpTitle}>Enter Customer Code</Text>
+            <Text style={styles.otpMessage}>Ask the customer for their 4-digit verification code.</Text>
+            <TextInput
+              style={styles.otpInput}
+              value={otpInput}
+              onChangeText={(text) => { setOtpInput(text.replace(/[^0-9]/g, '')); setOtpError(''); }}
+              placeholder="0000"
+              placeholderTextColor="#6B7280"
+              keyboardType="number-pad"
+              maxLength={4}
+              autoFocus
+            />
+            {otpError ? <Text style={styles.otpErrorText}>{otpError}</Text> : null}
+            <Text style={styles.otpHint}>Dev Mode: Use code "1234"</Text>
+            <View style={styles.otpActions}>
+              <TouchableOpacity style={styles.otpCancelBtn} onPress={() => setShowOtpModal(false)}>
+                <Text style={styles.otpCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.otpConfirmBtn, otpInput.length !== 4 && styles.otpConfirmDisabled]} 
+                onPress={handleOtpVerifyAndUpdate}
+                disabled={otpInput.length !== 4 || isUpdating}
+              >
+                {isUpdating ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.otpConfirmText}>Verify</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -295,7 +406,8 @@ export default function JobDetailsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0A0F1C' },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  errorText: { color: '#EF4444', fontSize: 16, marginBottom: 16 },
+  loadingText: { color: '#9CA3AF', marginTop: 12, fontSize: 14 },
+  errorText: { color: '#EF4444', fontSize: 16, marginTop: 12, marginBottom: 16 },
   backBtn: { backgroundColor: '#1F2937', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
   backBtnText: { color: '#FFFFFF', fontSize: 14 },
   header: {
@@ -317,24 +429,38 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 18, fontWeight: '600', color: '#FFFFFF' },
   scrollView: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingVertical: 16, paddingBottom: 100 },
+  scrollContent: { paddingHorizontal: 20, paddingVertical: 16, paddingBottom: 120 },
+  earningsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.2)',
+  },
+  earningsIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
+  },
+  earningsContent: { flex: 1 },
+  earningsLabel: { fontSize: 13, color: '#10B981', marginBottom: 2 },
+  earningsValue: { fontSize: 24, fontWeight: '700', color: '#10B981' },
   amountCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
   },
-  amountRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
+  amountRow: { marginBottom: 16 },
   amountLabel: { fontSize: 12, color: '#9CA3AF', marginBottom: 4 },
   amountValue: { fontSize: 28, fontWeight: '700', color: '#FFFFFF' },
-  feeBox: {
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-  },
-  feeLabel: { fontSize: 12, color: '#10B981', marginBottom: 4 },
-  feeValue: { fontSize: 20, fontWeight: '700', color: '#10B981' },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -348,25 +474,24 @@ const styles = StyleSheet.create({
   section: { marginBottom: 20 },
   sectionTitle: { fontSize: 14, fontWeight: '600', color: '#9CA3AF', marginBottom: 12 },
   customerCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: '#111827',
     borderRadius: 16,
     padding: 16,
   },
-  customerInfo: { flexDirection: 'row', alignItems: 'center' },
-  customerDetails: { marginLeft: 12 },
+  customerInfo: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  customerDetails: { marginLeft: 12, flex: 1 },
   customerName: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
   customerMobile: { fontSize: 14, color: '#9CA3AF', marginTop: 2 },
-  callButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#10B981',
+  callNote: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#1F2937',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 6,
   },
+  callNoteText: { fontSize: 12, color: '#9CA3AF' },
   locationCard: { backgroundColor: '#111827', borderRadius: 16, padding: 16 },
   locationInfo: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 },
   locationText: { flex: 1, fontSize: 14, color: '#FFFFFF', marginLeft: 12, lineHeight: 20 },
@@ -428,4 +553,71 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   completedText: { fontSize: 16, fontWeight: '600', color: '#10B981' },
+  // OTP Modal styles
+  otpOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  otpContainer: {
+    backgroundColor: '#111827',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#1F2937',
+  },
+  otpIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  otpTitle: { fontSize: 20, fontWeight: '700', color: '#FFFFFF', marginBottom: 8 },
+  otpMessage: { fontSize: 14, color: '#9CA3AF', textAlign: 'center', marginBottom: 20 },
+  otpInput: {
+    backgroundColor: '#1F2937',
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textAlign: 'center',
+    letterSpacing: 12,
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#374151',
+  },
+  otpErrorText: { fontSize: 13, color: '#EF4444', marginTop: 8 },
+  otpHint: { fontSize: 11, color: '#6B7280', marginTop: 8 },
+  otpActions: { flexDirection: 'row', gap: 12, width: '100%', marginTop: 20 },
+  otpCancelBtn: {
+    flex: 1,
+    backgroundColor: '#1F2937',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  otpCancelText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
+  otpConfirmBtn: {
+    flex: 1,
+    backgroundColor: '#10B981',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  otpConfirmDisabled: { backgroundColor: '#374151' },
+  otpConfirmText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
 });
