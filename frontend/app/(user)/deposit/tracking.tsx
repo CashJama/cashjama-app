@@ -129,11 +129,15 @@ export default function TrackingScreen() {
           <Text style={styles.statusDescription}>{statusInfo.description}</Text>
         </View>
 
-        {deposit.job_otp && ['agent_assigned', 'arrived', 'cash_collected', 'deposited', 'in_progress'].includes(deposit.status) && (
+        {deposit.job_otp && ['agent_assigned', 'arrived'].includes(deposit.status) && (
           <View style={styles.otpCard}>
             <View style={styles.otpHeader}><Ionicons name="shield-checkmark" size={22} color="#10B981" /><Text style={styles.otpTitle}>Verification Code</Text></View>
             <Text style={styles.otpCode}>{deposit.job_otp}</Text>
-            <Text style={styles.otpNote}>Share this code ONLY with the assigned BC agent to verify your transaction. Do NOT share with anyone else.</Text>
+            <View style={styles.otpInstructions}>
+              <Text style={styles.otpInstructionText}>1. Hand over CASH to the agent first</Text>
+              <Text style={styles.otpInstructionText}>2. Then share this code with the agent</Text>
+            </View>
+            <Text style={styles.otpNote}>Do NOT share this code until you have handed over the cash.</Text>
           </View>
         )}
 
@@ -141,9 +145,24 @@ export default function TrackingScreen() {
           <View style={styles.agentCard}>
             <View style={styles.agentHeader}>
               <View style={styles.agentAvatar}><Ionicons name="person" size={24} color="#4F46E5" /></View>
-              <View style={styles.agentInfo}><Text style={styles.agentLabel}>BC Agent</Text><Text style={styles.agentName}>{deposit.bc_agent_name}</Text>{deposit.bc_agent_mobile && <Text style={styles.agentMobile}>{deposit.bc_agent_mobile}</Text>}</View>
-              {deposit.bc_agent_mobile && <TouchableOpacity style={styles.callButton}><Ionicons name="call" size={20} color="#FFFFFF" /></TouchableOpacity>}
+              <View style={styles.agentInfo}>
+                <Text style={styles.agentLabel}>BC Agent</Text>
+                <Text style={styles.agentName}>{deposit.bc_agent_name}</Text>
+                {deposit.bc_agent_mobile && <Text style={styles.agentMobile}>{deposit.bc_agent_mobile}</Text>}
+              </View>
             </View>
+            {deposit.status === 'agent_assigned' && (
+              <View style={styles.etaContainer}>
+                <Ionicons name="time" size={18} color="#F59E0B" />
+                <Text style={styles.etaText}>ETA: 20-25 mins</Text>
+              </View>
+            )}
+            {deposit.bc_agent_mobile && (
+              <TouchableOpacity style={styles.callButton} onPress={() => Linking.openURL(`tel:${deposit.bc_agent_mobile?.replace(/\*/g, '0')}`)}>
+                <Ionicons name="call" size={18} color="#FFFFFF" />
+                <Text style={styles.callButtonText}>Call Agent</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
