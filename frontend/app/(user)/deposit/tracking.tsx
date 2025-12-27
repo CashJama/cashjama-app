@@ -275,6 +275,8 @@ const styles = StyleSheet.create({
   locationAddress: { fontSize: 14, fontWeight: '500', color: '#FFFFFF', lineHeight: 20 },
   cancelButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 12, paddingVertical: 14, gap: 8, marginBottom: 16 },
   cancelButtonText: { fontSize: 15, fontWeight: '600', color: '#EF4444' },
+  noCancelNote: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderRadius: 12, padding: 14, marginBottom: 16, gap: 10 },
+  noCancelText: { flex: 1, fontSize: 13, color: '#F59E0B', lineHeight: 20 },
   receiptNote: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#1F2937', borderRadius: 12, padding: 14 },
   receiptNoteText: { flex: 1, fontSize: 12, color: '#9CA3AF', marginLeft: 10, lineHeight: 18 },
   // Modal styles
