@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,8 @@ import {
   RefreshControl,
   ActivityIndicator,
   Switch,
-  Alert,
+  Modal,
+  AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -17,6 +18,7 @@ import { useAuth } from '../../src/context/AuthContext';
 import { api } from '../../src/services/api';
 
 const RUPEE = '₹';
+const POLL_INTERVAL = 10000; // 10 seconds auto-refresh
 
 interface Job {
   id: string;
@@ -43,15 +45,65 @@ export default function BCHomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isTogglingOnline, setIsTogglingOnline] = useState(false);
+  
+  // Modal states for dark-themed alerts
+  const [showModal, setShowModal] = useState(false);
+  const [modalConfig, setModalConfig] = useState<{
+    type: 'success' | 'error' | 'info';
+    title: string;
+    message: string;
+    onConfirm?: () => void;
+  }>({ type: 'info', title: '', message: '' });
 
+  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const appState = useRef(AppState.currentState);
+
+  // Load data on focus
   useFocusEffect(
     useCallback(() => {
       loadData();
+      startPolling();
+      
+      return () => {
+        stopPolling();
+      };
     }, [])
   );
 
-  const loadData = async () => {
+  // Handle app state changes for polling
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        loadData();
+        startPolling();
+      } else if (nextAppState.match(/inactive|background/)) {
+        stopPolling();
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+
+  const startPolling = () => {
+    stopPolling();
+    pollIntervalRef.current = setInterval(() => {
+      loadData(true); // Silent refresh
+    }, POLL_INTERVAL);
+  };
+
+  const stopPolling = () => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  };
+
+  const loadData = async (silent = false) => {
     try {
+      if (!silent) setIsLoading(true);
       const [onlineRes, availableRes, assignedRes] = await Promise.all([
         api.getOnlineStatus(),
         api.getAvailableJobs(),
@@ -63,7 +115,7 @@ export default function BCHomeScreen() {
     } catch (error) {
       console.log('Error loading data:', error);
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 
@@ -73,13 +125,18 @@ export default function BCHomeScreen() {
     setIsRefreshing(false);
   }, []);
 
+  const showDarkModal = (type: 'success' | 'error' | 'info', title: string, message: string, onConfirm?: () => void) => {
+    setModalConfig({ type, title, message, onConfirm });
+    setShowModal(true);
+  };
+
   const toggleOnlineStatus = async (value: boolean) => {
     setIsTogglingOnline(true);
     try {
       await api.setOnlineStatus(value);
       setIsOnline(value);
     } catch (error) {
-      Alert.alert('Error', 'Failed to update status');
+      showDarkModal('error', 'Error', 'Failed to update online status');
     } finally {
       setIsTogglingOnline(false);
     }
@@ -88,10 +145,11 @@ export default function BCHomeScreen() {
   const handleAcceptJob = async (jobId: string) => {
     try {
       await api.acceptJob(jobId);
-      Alert.alert('Success', 'Job accepted! You can now proceed to the customer.');
-      loadData();
+      showDarkModal('success', 'Job Accepted', 'You can now proceed to the customer location.', () => {
+        loadData();
+      });
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.detail || 'Failed to accept job');
+      showDarkModal('error', 'Error', error.response?.data?.detail || 'Failed to accept job');
     }
   };
 
@@ -103,7 +161,6 @@ export default function BCHomeScreen() {
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
       agent_assigned: 'Assigned',
-      in_progress: 'In Progress',
       arrived: 'Arrived',
       cash_collected: 'Cash Collected',
       deposited: 'Deposited',
@@ -114,12 +171,19 @@ export default function BCHomeScreen() {
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       agent_assigned: '#F59E0B',
-      in_progress: '#3B82F6',
       arrived: '#8B5CF6',
       cash_collected: '#EC4899',
       deposited: '#10B981',
     };
     return colors[status] || '#6B7280';
+  };
+
+  const getModalIcon = () => {
+    switch (modalConfig.type) {
+      case 'success': return { name: 'checkmark-circle', color: '#10B981' };
+      case 'error': return { name: 'close-circle', color: '#EF4444' };
+      default: return { name: 'information-circle', color: '#4F46E5' };
+    }
   };
 
   if (isLoading) {
@@ -131,6 +195,8 @@ export default function BCHomeScreen() {
       </SafeAreaView>
     );
   }
+
+  const modalIcon = getModalIcon();
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -168,7 +234,13 @@ export default function BCHomeScreen() {
         {/* Assigned Jobs Section */}
         {assignedJobs.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Your Active Jobs ({assignedJobs.length})</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Your Active Jobs ({assignedJobs.length})</Text>
+              <View style={styles.liveIndicator}>
+                <View style={styles.liveDot} />
+                <Text style={styles.liveText}>Live</Text>
+              </View>
+            </View>
             {assignedJobs.map((job) => (
               <TouchableOpacity
                 key={job.id}
@@ -177,7 +249,7 @@ export default function BCHomeScreen() {
               >
                 <View style={styles.jobHeader}>
                   <View style={styles.amountContainer}>
-                    <Text style={styles.amountLabel}>Amount</Text>
+                    <Text style={styles.amountLabel}>Deposit Amount</Text>
                     <Text style={styles.amount}>{RUPEE}{job.amount.toLocaleString()}</Text>
                   </View>
                   <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(job.status)}20` }]}>
@@ -186,16 +258,16 @@ export default function BCHomeScreen() {
                     </Text>
                   </View>
                 </View>
+                <View style={styles.earningRow}>
+                  <Text style={styles.earningLabel}>Your Earning:</Text>
+                  <Text style={styles.earningValue}>{RUPEE}{job.service_fee}</Text>
+                </View>
                 <View style={styles.jobInfo}>
                   <View style={styles.infoRow}>
                     <Ionicons name="location" size={16} color="#9CA3AF" />
                     <Text style={styles.infoText} numberOfLines={1}>
                       {job.location.address || 'Location not specified'}
                     </Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Ionicons name="call" size={16} color="#9CA3AF" />
-                    <Text style={styles.infoText}>{job.user_mobile}</Text>
                   </View>
                 </View>
                 <View style={styles.jobFooter}>
@@ -228,13 +300,13 @@ export default function BCHomeScreen() {
               <View key={job.id} style={styles.jobCard}>
                 <View style={styles.jobHeader}>
                   <View style={styles.amountContainer}>
-                    <Text style={styles.amountLabel}>Deposit</Text>
+                    <Text style={styles.amountLabel}>Deposit Amount</Text>
                     <Text style={styles.amount}>{RUPEE}{job.amount.toLocaleString()}</Text>
                   </View>
-                  <View style={styles.feeContainer}>
-                    <Text style={styles.feeLabel}>Your Earning</Text>
-                    <Text style={styles.fee}>{RUPEE}{job.service_fee}</Text>
-                  </View>
+                </View>
+                <View style={styles.earningRow}>
+                  <Text style={styles.earningLabel}>Your Earning:</Text>
+                  <Text style={styles.earningValue}>{RUPEE}{job.service_fee}</Text>
                 </View>
                 <View style={styles.jobInfo}>
                   <View style={styles.infoRow}>
@@ -252,6 +324,7 @@ export default function BCHomeScreen() {
                   style={styles.acceptButton}
                   onPress={() => handleAcceptJob(job.id)}
                 >
+                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
                   <Text style={styles.acceptButtonText}>Accept Job</Text>
                 </TouchableOpacity>
               </View>
@@ -259,6 +332,28 @@ export default function BCHomeScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Dark Modal for all alerts */}
+      <Modal visible={showModal} transparent animationType="fade" onRequestClose={() => setShowModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={[styles.modalIconContainer, { backgroundColor: `${modalIcon.color}15` }]}>
+              <Ionicons name={modalIcon.name as any} size={48} color={modalIcon.color} />
+            </View>
+            <Text style={styles.modalTitle}>{modalConfig.title}</Text>
+            <Text style={styles.modalMessage}>{modalConfig.message}</Text>
+            <TouchableOpacity 
+              style={[styles.modalButton, { backgroundColor: modalIcon.color }]}
+              onPress={() => {
+                setShowModal(false);
+                modalConfig.onConfirm?.();
+              }}
+            >
+              <Text style={styles.modalButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -276,13 +371,17 @@ const styles = StyleSheet.create({
     borderBottomColor: '#1F2937',
   },
   greeting: { fontSize: 14, color: '#9CA3AF' },
-  userName: { fontSize: 20, fontWeight: '700', color: '#FFFFFF', marginTop: 2 },
+  userName: { fontSize: 24, fontWeight: '700', color: '#FFFFFF' },
   onlineToggle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   onlineLabel: { fontSize: 14, fontWeight: '600' },
   scrollView: { flex: 1 },
-  scrollContent: { paddingHorizontal: 20, paddingVertical: 16, paddingBottom: 24 },
+  scrollContent: { paddingHorizontal: 20, paddingVertical: 16, paddingBottom: 100 },
   section: { marginBottom: 24 },
-  sectionTitle: { fontSize: 16, fontWeight: '600', color: '#FFFFFF', marginBottom: 12 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#FFFFFF', marginBottom: 12 },
+  liveIndicator: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#10B981' },
+  liveText: { fontSize: 12, color: '#10B981', fontWeight: '600' },
   jobCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
@@ -295,38 +394,112 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   amountContainer: {},
   amountLabel: { fontSize: 12, color: '#9CA3AF', marginBottom: 2 },
-  amount: { fontSize: 22, fontWeight: '700', color: '#FFFFFF' },
-  feeContainer: { alignItems: 'flex-end' },
-  feeLabel: { fontSize: 12, color: '#9CA3AF', marginBottom: 2 },
-  fee: { fontSize: 18, fontWeight: '700', color: '#10B981' },
-  statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  statusText: { fontSize: 13, fontWeight: '600' },
-  jobInfo: { marginBottom: 12 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-  infoText: { fontSize: 13, color: '#9CA3AF', marginLeft: 8, flex: 1 },
-  jobFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  viewDetails: { fontSize: 14, color: '#10B981', fontWeight: '500' },
-  acceptButton: {
-    backgroundColor: '#10B981',
-    borderRadius: 12,
-    paddingVertical: 14,
+  amount: { fontSize: 24, fontWeight: '700', color: '#FFFFFF' },
+  statusBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  statusText: { fontSize: 12, fontWeight: '600' },
+  earningRow: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderRadius: 8,
+  },
+  earningLabel: { fontSize: 14, color: '#9CA3AF' },
+  earningValue: { fontSize: 16, fontWeight: '700', color: '#10B981' },
+  feeContainer: { alignItems: 'flex-end' },
+  feeLabel: { fontSize: 11, color: '#10B981', marginBottom: 2 },
+  fee: { fontSize: 18, fontWeight: '700', color: '#10B981' },
+  jobInfo: { marginBottom: 12 },
+  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  infoText: { fontSize: 14, color: '#9CA3AF', flex: 1 },
+  jobFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#1F2937',
+  },
+  viewDetails: { fontSize: 14, fontWeight: '600', color: '#10B981' },
+  acceptButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#10B981',
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+    marginTop: 4,
   },
   acceptButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
   offlineMessage: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(245, 158, 11, 0.1)',
-    borderRadius: 12,
     padding: 16,
+    borderRadius: 12,
     gap: 12,
   },
   offlineText: { fontSize: 14, color: '#F59E0B', flex: 1 },
   emptyState: { alignItems: 'center', paddingVertical: 40 },
-  emptyTitle: { fontSize: 16, fontWeight: '600', color: '#FFFFFF', marginTop: 12 },
-  emptySubtitle: { fontSize: 14, color: '#6B7280', marginTop: 4 },
+  emptyTitle: { fontSize: 16, fontWeight: '600', color: '#6B7280', marginTop: 12 },
+  emptySubtitle: { fontSize: 14, color: '#4B5563', marginTop: 4 },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  modalContainer: {
+    backgroundColor: '#111827',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#1F2937',
+  },
+  modalIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  modalButton: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
 });
