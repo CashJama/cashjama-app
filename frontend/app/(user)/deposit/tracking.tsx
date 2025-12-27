@@ -274,6 +274,27 @@ export default function TrackingScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Dark-themed Confirm Deposit Modal */}
+      <Modal visible={showConfirmModal} transparent animationType="fade" onRequestClose={() => setShowConfirmModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={[styles.modalIconContainer, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+              <Ionicons name="checkmark-done-circle" size={48} color="#10B981" />
+            </View>
+            <Text style={styles.modalTitle}>Confirm Deposit</Text>
+            <Text style={styles.modalMessage}>Please confirm that your cash deposit of ₹{deposit?.amount?.toLocaleString()} has been successfully credited to your bank account.</Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.modalCancelButton} onPress={() => setShowConfirmModal(false)} disabled={isConfirming}>
+                <Text style={styles.modalCancelButtonText}>Not Yet</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalConfirmButton, { backgroundColor: '#10B981' }]} onPress={confirmDepositReceived} disabled={isConfirming}>
+                {isConfirming ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={styles.modalConfirmButtonText}>Yes, Confirm</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
