@@ -741,6 +741,18 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   completedText: { fontSize: 18, fontWeight: '700', color: '#10B981' },
+  awaitingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(6, 182, 212, 0.1)',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    gap: 12,
+  },
+  awaitingTextContainer: { flex: 1 },
+  awaitingTitle: { fontSize: 16, fontWeight: '700', color: '#06B6D4' },
+  awaitingSubtitle: { fontSize: 13, color: '#9CA3AF', marginTop: 2 },
   // OTP Modal
   otpOverlay: {
     position: 'absolute',
