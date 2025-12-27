@@ -52,12 +52,12 @@ Before a BC Agent needs to use the app for the first time.
 **Step 2:** Run this command (replace with actual BC details):
 
 ```
-curl -X POST "https://dcash-ops.preview.emergentagent.com/api/admin/create-bc-agent?mobile=MOBILE_NUMBER&name=AGENT_NAME"
+curl -X POST "https://cash2bank-1.preview.emergentagent.com/api/admin/create-bc-agent?mobile=MOBILE_NUMBER&name=AGENT_NAME"
 ```
 
 **Example:**
 ```
-curl -X POST "https://dcash-ops.preview.emergentagent.com/api/admin/create-bc-agent?mobile=9876543210&name=Ramesh%20Kumar"
+curl -X POST "https://cash2bank-1.preview.emergentagent.com/api/admin/create-bc-agent?mobile=9876543210&name=Ramesh%20Kumar"
 ```
 
 > **Note:** Replace spaces in names with `%20` (e.g., "Ramesh Kumar" becomes "Ramesh%20Kumar")

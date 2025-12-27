@@ -10,11 +10,11 @@ CashJama is a mobile-first fintech operations platform for doorstep cash-to-bank
 -   **Admin:** Manages the platform via a web dashboard.
 
 **KEY FEATURES - USER APP:**
--   **Authentication:** Mobile number + OTP login.
--   **Deposit Request:** Enter amount, view fee, select location, confirm.
--   **Tracking:** View assigned BC Agent, live location, and job status.
--   **Verification:** Job-specific OTP is shown to the user to share with the BC Agent.
--   **History:** View past requests.
+-   Authentication: Mobile number + OTP login.
+-   Deposit Request: Enter amount, view fee, select location, confirm.
+-   Tracking: View assigned BC Agent, live location, and job status.
+-   Verification: Job-specific OTP is shown to the user to share with the BC Agent.
+-   History: View past requests.
 
 **KEY FEATURES - BC AGENT APP:**
 -   View and accept available jobs.
@@ -28,63 +28,30 @@ CashJama is a mobile-first fintech operations platform for doorstep cash-to-bank
 -   **Integrations:** MSG91 (OTP), Google Maps SDK (mocked for now)
 
 **USER REQUESTS DURING THIS SESSION:**
--   Implement a minimal, pilot-focused BC Agent flow.
--   Fix numerous P0 and P1 bugs in the User flow related to navigation, state management, UI consistency, and time display.
--   Create operational documentation for the pilot.
--   Fix critical pilot-blocking bugs for both User and BC Agent flows, including state persistence, OTP handling, and status refresh issues.
+The user's primary goal was to achieve a stable, pilot-ready build. This involved an iterative and intensive process of fixing numerous critical, pilot-blocking bugs reported in multiple waves. The key demands were:
+-   Fix job persistence issues where active jobs would disappear from both User and BC Agent views.
+-   Correct a broken and inconsistent job lifecycle and status flow.
+-   Ensure all UI/modals are consistent with the app's dark theme, removing all native system alerts.
+-   Clarify the earnings display for BC Agents to avoid confusion.
+-   Implement a critical control-flow change to give the **User** final authority to confirm a deposit's completion.
+-   Implement a hard lock on the BC Agent's UI during an active transaction to prevent state corruption.
 </original_problem_statement>
 
 **User's preferred language**: English
 
 **what currently exists?**
-A full-stack application with a FastAPI backend and an Expo React Native frontend.
--   **User Flow:** The user-facing portion of the app is considered feature-complete and stable after multiple rounds of intensive bug fixing. This includes authentication, deposit creation, tracking, history, and profile management. All major navigation and state management issues have been addressed.
--   **BC Agent Flow (MVP):** A minimal viable product for the BC (Business Correspondent) Agent has been implemented. This includes role-based login, a home screen with an online/offline toggle, a list of assigned jobs, and a job details screen to update status.
--   **Backend:** All necessary APIs to support both User and BC Agent flows are in place, including status updates, job assignments, and user management.
+A full-stack application with a FastAPI backend and an Expo React Native frontend. The app is feature-complete for the pilot, incorporating a complex, multi-step job lifecycle. The core logic now grants final deposit confirmation authority to the user. All major bugs reported by the user have been addressed with code changes, but the very last set of fixes for UI locking and state management are unverified.
 
 **Last working item**:
-    - Last item agent was working: The agent was implementing a large batch of critical, pilot-blocking bug fixes requested by the user in message #366. These fixes span both the User and BC Agent applications and are crucial for a stable end-to-end test. The agent has written and overwritten the code for these fixes but has not yet restarted services or verified them.
+    - Last item agent was working: Implementing fixes for the final three pilot-blocking issues reported by the user in message #434, focused on state management and UI locks.
+        1.  Make the BC Agent's job screen read-only after they submit for user confirmation.
+        2.  Prevent a Failed to load deposit details error on the user's screen by stopping polling on final job states.
+        3.  Implement a hard lock to disable tab navigation for the BC Agent during an active transaction.
     - Status: IN PROGRESS
     - Agent Testing Done: N
     - Which testing method agent to use? both
-        - First, restart the backend and use  to test the API logic for the BC Agent flow (OTP verification, status updates).
-        - Then, restart the frontend and use the  to visually verify all UI and state persistence fixes on both the User Tracking screen and the BC Agent screens.
-    - User Testing Done: N
-
-**All Pending/In progress Issue list**:
-  - Issue 1: Verify fixes for all critical pilot-blocking bugs (P0)
-
-  Issues Detail:
-  - Issue 1: 
-     - **Description**: The agent has attempted to fix a list of 8 critical bugs from message #366. These changes are unverified. The next agent must restart services and systematically test each fix.
-     - **Attempted fixes**: The agent overwrote , , and  with code intended to solve the issues.
-     - **Next debug checklist**:
-        1. Restart backend and expo services: backend: ERROR (not running)
-expo: ERROR (not running)
-backend: ERROR (abnormal termination)
-expo: started.
-        2. **User App Fixes Verification:**
-           - **OTP Persistence:** Create a deposit, assign an agent, and check if the 4-digit verification code on the user's tracking screen remains visible.
-           - **Auto-Refresh:** On the user's tracking screen, have the BC agent update the status and confirm the user's UI updates automatically without a manual refresh.
-           - **Cancel Restriction:** On the user tracking screen, once the agent status is Arrived, confirm the Cancel Request button is disabled and an explanatory note is visible.
-        3. **BC Agent App Fixes Verification:**
-           - **Job Persistence:** Log in as a BC agent, accept a job, background the app (or navigate away and back), and confirm the accepted job is still present on the home screen.
-           - **OTP Entry:** On the BC job details screen, confirm there is now an input field to enter the user's 4-digit OTP. Test that the job cannot proceed without correct OTP verification (use API to verify).
-           - **Masked Phone Number:** On the BC job details screen, confirm the Call Customer button does not expose the raw number (the code uses  with a placeholder, which is acceptable for the pilot).
-           - **Earnings Display:** Log in as a newly created BC agent and verify on the Earnings tab that initial values are zero.
-           - **Fee Label:** On the BC job details screen, confirm the fee is clearly labeled as Your earning for this job.
-     - **Why fix this issue and what will be achieved with the fix?**: These are pilot-blocking bugs that prevent a stable end-to-end test. Fixing them will make the application usable for the pilot phase.
-     - **Status**:  IN PROGRESS
-     - **Is recurring issue?** N
-     - **Should Test frontend/backend/both after fix?** both
-     - **Blocked on other issue**: None
-
-**In progress Task List**:
-  - Task 1:  Fix Critical Pilot-Blocking Bugs (P0)
-
- Task Detail:
-  - Task 1: 
-     - **Where to resume**: The code for the fixes has been written. The next step is to restart the  and 
+        - **Backend**: No backend testing is required as the latest changes were frontend-only.
+        - **Frontend**: Restart the 
   Usage: expo [command] [options]
 
   Options:
@@ -153,107 +120,354 @@ expo: started.
     upload:ios [path]                 Superseded by eas submit in eas-cli
     client:ios [path]                 Superseded by Expo Dev Clients
 
-[03:28:45]   Run a command with --help for more info 💡
-[03:28:45]     $ expo start --help
-[03:28:45] services and then begin a thorough verification process as outlined in the Next debug checklist above.
-     - **What will be achieved with this?**: A stable, end-to-end testable application ready for the pilot program.
+[15:23:50]   Run a command with --help for more info 💡
+[15:23:50]     $ expo start --help
+[15:23:50] service. Then, use the  to visually verify the fixes.
+            1.  As a BC Agent, process a job up to the Submit for Confirmation step. Verify the job screen becomes read-only and the bottom tabs are disabled.
+            2.  As a User, confirm the deposit. Verify the user tracking screen doesn't show any errors and polling stops.
+            3.  As the BC Agent, verify the UI lock is released and tabs are re-enabled after the job is completed.
+    - User Testing Done: N
+
+**All Pending/In progress Issue list**:
+  - Issue 1:  Verify final state and lock fixes (P0)
+
+  Issues Detail:
+  - Issue 1: 
+     - **Description**: The agent has implemented the final three critical fixes related to UI locking and state synchronization. The code has been written to make the BC job screen read-only post-submission, prevent user-side polling errors, and disable BC tab navigation during an active job. These changes are unverified.
+     - **Attempted fixes**: The agent overwrote  to introduce a  and edited  and  to handle the new locked states.
+     - **Next debug checklist**:
+        1.  Restart the 
+  Usage: expo [command] [options]
+
+  Options:
+  
+    -V, --version                     output the version number
+    --non-interactive                 Fail, if an interactive prompt would be required to continue.
+    -h, --help                        output usage information
+  
+  Commands:
+
+    init [name]                       Create a new Expo project
+    start [path]                      Start a local dev server for the app
+    start:web [path]                  Start a Webpack dev server for the web app
+    export [path]                     Export the static files of the app for hosting it on a web server
+    install [packages...]             Install a module or other package to a project
+    run:android [path]                Run the Android app binary locally
+    run:ios [path]                    Run the iOS app binary locally
+    send [path]                       Share the project's URL to an email address
+
+    login                             Login to an Expo account
+    logout                            Logout of an Expo account
+    register                          Sign up for a new Expo account
+    whoami                            Return the currently authenticated account
+
+    client:install:ios                Install Expo Go for iOS on the simulator
+    client:install:android            Install Expo Go for Android on a connected device or emulator
+
+    config [path]                     Show the project config
+    doctor [path]                     Diagnose issues with the project
+    upgrade [sdk-version]             Upgrade the project packages and config for the given SDK version
+
+    customize:web [path]              Eject the default web files for customization
+    prebuild [path]                   Create native iOS and Android project files before building natively.
+                                      Learn more: https://docs.expo.dev/workflow/customizing/
+
+    build:web [path]                  Build the web app for production
+
+    credentials:manager [path]        Superseded by eas credentials in eas-cli
+
+    url [path]                        Log a URL for opening the project in Expo Go
+    url:ipa [path]                    Log the download URL for the standalone iOS binary
+    url:apk [path]                    Log the download URL for the standalone Android binary
+
+    webhooks [path]                   List all webhooks for a project
+    webhooks:add [path]               Add a webhook to a project
+    webhooks:remove [path]            Delete a webhook
+    webhooks:update [path]            Update an existing webhook
+
+    build:ios [path]                  Superseded by eas build in eas-cli
+    build:android [path]              Superseded by eas build in eas-cli
+    build:status [path]               Superseded by eas build:list in eas-cli
+    eject [path]                      Superseded by expo prebuild
+    fetch:ios:certs [path]            Superseded by eas credentials in eas-cli
+    fetch:android:keystore [path]     Superseded by eas credentials in eas-cli
+    fetch:android:hashes [path]       Superseded by eas credentials in eas-cli
+    fetch:android:upload-cert [path]  Superseded by eas credentials in eas-cli
+    publish [path]                    Superseded by eas update in eas-cli
+    publish:set [path]                Superseded by eas update:republish in eas-cli
+    publish:rollback [path]           Superseded by eas update:republish in eas-cli
+    publish:history [path]            Superseded by eas update:list in eas-cli
+    publish:details [path]            Superseded by eas update:view in eas-cli
+    push:android:upload [path]        Superseded by eas credentials in eas-cli
+    push:android:show [path]          Superseded by eas credentials in eas-cli
+    push:android:clear [path]         Superseded by eas credentials in eas-cli
+    upload:android [path]             Superseded by eas submit in eas-cli
+    upload:ios [path]                 Superseded by eas submit in eas-cli
+    client:ios [path]                 Superseded by Expo Dev Clients
+
+[15:23:50]   Run a command with --help for more info 💡
+[15:23:50]     $ expo start --help
+[15:23:50] service using expo: ERROR (not running)
+expo: started.
+        2.  Create a new deposit as a User.
+        3.  As a BC Agent, accept and process the job until you press Submit for Confirmation.
+        4.  **Verify BC Lock**: On the BC Agent app, confirm that the bottom tabs (Earnings, Profile) are disabled and a lock banner is visible on the job screen. Confirm all action buttons on the job screen are disabled.
+        5.  **Verify User State Sync**: On the User app, confirm the Confirm Deposit Received button appears and no Failed to load errors pop up.
+        6.  **Verify Unlock**: As the User, press Confirm Deposit Received. Then, switch back to the BC Agent app and confirm that the UI lock is released and the tabs are enabled again.
+     - **Why fix this issue and what will be achieved with the fix?**: This is the final step to create a misuse-proof, stable pilot build. It prevents state corruption and ensures the transaction flow is strictly followed.
      - **Status**:  IN PROGRESS
-     - **Should Test frontend/backend/both after fix?** both
+     - **Is recurring issue?** N
+     - **Should Test frontend/backend/both after fix?** frontend
+     - **Blocked on other issue**: None
+
+**In progress Task List**:
+  - Task 1:  Finalize and verify the state and UI lock mechanisms (P0)
+
+ Task Detail:
+  - Task 1: 
+     - **Where to resume**: The code for the fixes has been written. The immediate next step is to restart the 
+  Usage: expo [command] [options]
+
+  Options:
+  
+    -V, --version                     output the version number
+    --non-interactive                 Fail, if an interactive prompt would be required to continue.
+    -h, --help                        output usage information
+  
+  Commands:
+
+    init [name]                       Create a new Expo project
+    start [path]                      Start a local dev server for the app
+    start:web [path]                  Start a Webpack dev server for the web app
+    export [path]                     Export the static files of the app for hosting it on a web server
+    install [packages...]             Install a module or other package to a project
+    run:android [path]                Run the Android app binary locally
+    run:ios [path]                    Run the iOS app binary locally
+    send [path]                       Share the project's URL to an email address
+
+    login                             Login to an Expo account
+    logout                            Logout of an Expo account
+    register                          Sign up for a new Expo account
+    whoami                            Return the currently authenticated account
+
+    client:install:ios                Install Expo Go for iOS on the simulator
+    client:install:android            Install Expo Go for Android on a connected device or emulator
+
+    config [path]                     Show the project config
+    doctor [path]                     Diagnose issues with the project
+    upgrade [sdk-version]             Upgrade the project packages and config for the given SDK version
+
+    customize:web [path]              Eject the default web files for customization
+    prebuild [path]                   Create native iOS and Android project files before building natively.
+                                      Learn more: https://docs.expo.dev/workflow/customizing/
+
+    build:web [path]                  Build the web app for production
+
+    credentials:manager [path]        Superseded by eas credentials in eas-cli
+
+    url [path]                        Log a URL for opening the project in Expo Go
+    url:ipa [path]                    Log the download URL for the standalone iOS binary
+    url:apk [path]                    Log the download URL for the standalone Android binary
+
+    webhooks [path]                   List all webhooks for a project
+    webhooks:add [path]               Add a webhook to a project
+    webhooks:remove [path]            Delete a webhook
+    webhooks:update [path]            Update an existing webhook
+
+    build:ios [path]                  Superseded by eas build in eas-cli
+    build:android [path]              Superseded by eas build in eas-cli
+    build:status [path]               Superseded by eas build:list in eas-cli
+    eject [path]                      Superseded by expo prebuild
+    fetch:ios:certs [path]            Superseded by eas credentials in eas-cli
+    fetch:android:keystore [path]     Superseded by eas credentials in eas-cli
+    fetch:android:hashes [path]       Superseded by eas credentials in eas-cli
+    fetch:android:upload-cert [path]  Superseded by eas credentials in eas-cli
+    publish [path]                    Superseded by eas update in eas-cli
+    publish:set [path]                Superseded by eas update:republish in eas-cli
+    publish:rollback [path]           Superseded by eas update:republish in eas-cli
+    publish:history [path]            Superseded by eas update:list in eas-cli
+    publish:details [path]            Superseded by eas update:view in eas-cli
+    push:android:upload [path]        Superseded by eas credentials in eas-cli
+    push:android:show [path]          Superseded by eas credentials in eas-cli
+    push:android:clear [path]         Superseded by eas credentials in eas-cli
+    upload:android [path]             Superseded by eas submit in eas-cli
+    upload:ios [path]                 Superseded by eas submit in eas-cli
+    client:ios [path]                 Superseded by Expo Dev Clients
+
+[15:23:52]   Run a command with --help for more info 💡
+[15:23:52]     $ expo start --help
+[15:23:52] service and then perform a thorough verification of the locking mechanism as described in the checklist above.
+     - **What will be achieved with this?**: A stable, end-to-end testable application ready for the final pilot validation.
+     - **Status**:  IN PROGRESS
+     - **Should Test frontend/backend/both after fix?** frontend
      - **Blocked on something**: None
 
 **Upcoming and Future Tasks**
-    Upcoming Tasks:
-    - **P1: BC Agent MVP (Phase-2)**: Once the current MVP is stable and verified, the user may request further enhancements. This is pending user feedback after the pilot.
-
     Future Tasks:
-    - **Real OTP Integration**: Replace the mock/dev OTP logic with a real MSG91 integration.
-    - **Real Maps Integration**: Replace placeholder map rendering with the full Google Maps SDK integration.
-    - **Admin Panel UI**: Convert the -based admin functions into a proper web UI.
+    - **P1: Real OTP Integration**: Replace mock OTP logic with MSG91.
+    - **P1: Real Maps Integration**: Replace placeholder map rendering with Google Maps SDK.
+    - **P2: Admin Panel UI**: Build a web UI for the -based admin functions.
+    - **P2: Push Notifications**: Add push notifications for job status updates.
+    - **P2: Photo Proof of Deposit**: Allow BCs to upload proof of bank deposit.
 
 **Completed work in this session**
-- **BC Agent Flow (Initial Implementation)**: Created backend APIs, frontend screens (), and role-based routing for the BC Agent.
-- ** Documentation**: Created a comprehensive guide for pilot operations, including how to create BC agents via .
-- **Extensive User Flow Bug Fixing**:
-    - **UI Bugs**: Fixed text overflow, incorrect Rupee symbol () rendering, and inconsistent modal styles (by creating a reusable  component).
-    - **Timestamp Correction**: Fixed an issue where the backend was not sending timezone-aware ISO 8601 strings, causing incorrect time display on the frontend. The  helper in  was corrected.
-    - **State Management**: Fixed a bug where cancelling a deposit didn't update the UI by adding  to the  screen to re-fetch state.
-    - **Complex Navigation Stack**: Resolved a cascade of navigation bugs in the tab-based layout by implementing a robust strategy using URL parameters (, ) to maintain navigation context between screens.
-- **BC Agent MVP (Phase 1 Refactor)**: Reworked the BC Agent flow to a minimal scope, including an online/offline toggle and a new status progression ( ->  ->  -> ).
-- **Static Content Pages**: Created placeholder pages for Terms, Privacy, and Contact, accessible from the Profile screen.
+- **Critical Control Flow Rearchitecture**: Shifted final completion authority from the BC Agent to the User. Implemented a new  status and a user-side Confirm Deposit Received flow.
+- **BC Agent UI Hard Lock**: Implemented a global  to disable tab navigation and back actions for the BC agent during an active transaction, preventing state corruption.
+- **Comprehensive Bug Fixing (Multiple Rounds)**:
+  - **Job Persistence**: Fixed bugs on both User and BC Agent apps where active jobs would disappear from the home screen. Ensured jobs remain visible through the entire lifecycle ( -> ).
+  - **UI/Modal Consistency**: Replaced all native  calls with a custom, consistently styled  component for a unified dark-theme user experience.
+  - **Status Flow Correction**: Corrected the entire backend and frontend status progression to a logical and trustworthy sequence:  →  →  →  →  → .
+- **UX & Clarity Enhancements**:
+  - **BC Earnings Display**: Refactored the job cards and details screen to clearly distinguish between Deposit Amount, Service Fee, and Your Earning.
+  - **BC Earnings History**: Created a detailed, tappable job history list on the Earnings screen, showing a breakdown of each completed job in a modal.
+  - **User Home UI**: Implemented a collapsible Service Fee Structure section to de-clutter the UI.
+  - **Pilot-Specific Text**: Added instructional text (e.g., Collect CASH before entering OTP) to guide users and agents.
+- **Improved Error & State Handling**:
+  - **Token Expiry**: Implemented a 401 interceptor to silently log the user out on token expiry instead of showing a raw error.
+  - **State Polling**: Optimized polling intervals on tracking screens to ensure timely updates while stopping polling on final states to prevent errors.
 
 **Earlier issues found/mentioned but not fixed**
-None. The agent has been diligent in addressing all user-reported issues, although some required multiple attempts to fix correctly.
+- The user mentioned OTP reliability issues with real numbers (message #244) and location fallback bugs (message #244). The agent noted these are related to mocked integrations (MSG91, location services) and are out of scope for the pilot, which the user implicitly accepted by focusing on other fixes.
 
 **Known issue recurrence from previous fork**
-  - No recurrence noted. The issues in this session were new.
+  - No recurrence from the previous fork. This session involved fixing a cascade of newly discovered bugs.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
 -   **Full-Stack Monorepo**: FastAPI backend and Expo React Native frontend.
--   **Role-Based Routing**: The root  and  check the user's role from the JWT to redirect to either the  or  route groups.
--   **State Persistence on Focus**:  hook from Expo Router is used on  and BC Agent screens to re-fetch data when the screen becomes visible, solving state inconsistency issues.
--   **Robust Navigation in Tabs**: A combination of  and URL query parameters (, ) is used to manage complex, nested navigation stacks across different tabs, which was a major challenge.
--   **Mocking for Development**: A DEV OTP bypass ( for login,  for job verification) is active. Phone calls are mocked with .
+-   **Role-Based Routing**: Root  directs users to  or  groups.
+-   **State Synchronization**: Extensive use of  and timed polling () to keep client state in sync with the backend across both apps. Polling is now disabled on terminal states.
+-   **Global State for UI Locking**: A new React Context () is used in the BC Agent layout () to enforce a hard lock on navigation during a transaction.
+-   **Centralized API Service with Interceptors**: An  instance in  handles all API calls, including a new 401 interceptor for gracefully managing token expiry.
+-   **Component-Driven UI**: Heavy use of reusable components like  to enforce UI consistency.
 
 **key DB schema**
   - **users**: 
-  - **deposits**:  (Status enum now includes , , ).
+  - **deposits**: 
+    - **status enum**: , , , , , , , 
 
 **changes in tech stack**
   - No changes to the core tech stack.
 
 **All files of reference**
-*   **/app/frontend/app/(user)/deposit/tracking.tsx**: Recently updated to fix several user-side bugs (OTP display, auto-refresh, cancel restriction). Needs verification.
-*   **/app/frontend/app/(bc)/home.tsx**: Recently overwritten to add  for job persistence. Needs verification.
-*   **/app/frontend/app/(bc)/job/[id].tsx**: Recently overwritten to add OTP verification, masked calling, clearer labels, and . Needs verification.
-*   **/app/backend/server.py**: Updated to support the new BC agent status flow (, etc.) and online/offline toggling.
-*   **/app/frontend/app/(user)/home.tsx**: Updated with  to solve state inconsistency after cancelling a request.
-*   **/app/frontend/app/(user)/history.tsx**: Updated to handle complex back-navigation using a  parameter.
-*   **/app/PILOT_OPERATIONS.md**: A new document explaining the manual admin process for creating BC agents.
+-   **/app/frontend/app/(bc)/_layout.tsx**: **Recently overwritten**. Implements the  to disable tabs during an active job. **Needs verification.**
+-   **/app/frontend/app/(bc)/job/[id].tsx**: **Recently edited**. Implements the read-only view for the BC agent after they submit for confirmation. **Needs verification.**
+-   **/app/frontend/app/(user)/deposit/tracking.tsx**: **Recently edited**. Stops polling on final states to prevent errors and includes the new Confirm Deposit Received flow. **Needs verification.**
+-   **/app/backend/server.py**: **Recently edited**. Contains the new user confirmation endpoint () and the updated status flow logic.
+-   **/app/frontend/app/(bc)/earnings.tsx**: **Recently overwritten**. Now displays a summary and a tappable list of job history details in a modal.
+-   **/app/frontend/src/services/api.ts**: **Recently edited**. Includes a 401 interceptor and the new  method.
 
 **Areas that need refactoring**:
-- The agent used  to update the BC agent screens (, ). While effective, this makes it harder to review the specific changes. Future edits should favor more targeted  operations.
+- The agent used  multiple times on critical files like  and . While this was effective for rapid, large-scale bug fixing, it makes reviewing the specific changes difficult.
 
 **key api endpoints**
--   : Manually creates a BC agent.
--   : Sets the BC agent's online/offline status.
--   : Gets a list of jobs assigned to the current BC agent.
--   : BC agent accepts a job.
--   : A set of endpoints to update job status (e.g., , ).
--   : BC agent verifies the user's 4-digit code.
+-   : (NEW) User-only endpoint to give final confirmation and move the job to .
+-   : (MODIFIED) Now used by the BC Agent to move status to , relinquishing final control.
+-   : Returns all non-completed/cancelled jobs for the BC agent.
+-   : Returns the user's currently active job.
+-   : Returns a list of all completed jobs for the BC agent.
 
 **Critical Info for New Agent**
--   **Verify Last Fixes First**: The absolute priority is to restart all services (backend: ERROR (not running)
-expo: stopped
-backend: started
-expo: started) and thoroughly test the fixes for the 8 critical bugs listed in message #366. The code has been written but is completely unverified.
--   **User Flow is Locked**: The user has declared the User-side flow locked and verified. Do NOT make any more changes to the user flow unless a new bug is discovered during testing.
--   **Navigation is Fragile**: The navigation system, especially returning to the correct screen from nested flows (e.g., Profile -> History -> Tracking -> Back -> History -> Back -> Profile), was very difficult to get right. It now relies on  and  URL parameters. Be extremely careful not to break this logic.
--   **Pilot-Focused Scope**: The current scope is minimal and pilot-focused. Do not add polish, new features, or real integrations (Maps, MSG91) unless explicitly instructed.
+-   **Verify Final Locks First**: Your absolute priority is to restart the 
+  Usage: expo [command] [options]
+
+  Options:
+  
+    -V, --version                     output the version number
+    --non-interactive                 Fail, if an interactive prompt would be required to continue.
+    -h, --help                        output usage information
+  
+  Commands:
+
+    init [name]                       Create a new Expo project
+    start [path]                      Start a local dev server for the app
+    start:web [path]                  Start a Webpack dev server for the web app
+    export [path]                     Export the static files of the app for hosting it on a web server
+    install [packages...]             Install a module or other package to a project
+    run:android [path]                Run the Android app binary locally
+    run:ios [path]                    Run the iOS app binary locally
+    send [path]                       Share the project's URL to an email address
+
+    login                             Login to an Expo account
+    logout                            Logout of an Expo account
+    register                          Sign up for a new Expo account
+    whoami                            Return the currently authenticated account
+
+    client:install:ios                Install Expo Go for iOS on the simulator
+    client:install:android            Install Expo Go for Android on a connected device or emulator
+
+    config [path]                     Show the project config
+    doctor [path]                     Diagnose issues with the project
+    upgrade [sdk-version]             Upgrade the project packages and config for the given SDK version
+
+    customize:web [path]              Eject the default web files for customization
+    prebuild [path]                   Create native iOS and Android project files before building natively.
+                                      Learn more: https://docs.expo.dev/workflow/customizing/
+
+    build:web [path]                  Build the web app for production
+
+    credentials:manager [path]        Superseded by eas credentials in eas-cli
+
+    url [path]                        Log a URL for opening the project in Expo Go
+    url:ipa [path]                    Log the download URL for the standalone iOS binary
+    url:apk [path]                    Log the download URL for the standalone Android binary
+
+    webhooks [path]                   List all webhooks for a project
+    webhooks:add [path]               Add a webhook to a project
+    webhooks:remove [path]            Delete a webhook
+    webhooks:update [path]            Update an existing webhook
+
+    build:ios [path]                  Superseded by eas build in eas-cli
+    build:android [path]              Superseded by eas build in eas-cli
+    build:status [path]               Superseded by eas build:list in eas-cli
+    eject [path]                      Superseded by expo prebuild
+    fetch:ios:certs [path]            Superseded by eas credentials in eas-cli
+    fetch:android:keystore [path]     Superseded by eas credentials in eas-cli
+    fetch:android:hashes [path]       Superseded by eas credentials in eas-cli
+    fetch:android:upload-cert [path]  Superseded by eas credentials in eas-cli
+    publish [path]                    Superseded by eas update in eas-cli
+    publish:set [path]                Superseded by eas update:republish in eas-cli
+    publish:rollback [path]           Superseded by eas update:republish in eas-cli
+    publish:history [path]            Superseded by eas update:list in eas-cli
+    publish:details [path]            Superseded by eas update:view in eas-cli
+    push:android:upload [path]        Superseded by eas credentials in eas-cli
+    push:android:show [path]          Superseded by eas credentials in eas-cli
+    push:android:clear [path]         Superseded by eas credentials in eas-cli
+    upload:android [path]             Superseded by eas submit in eas-cli
+    upload:ios [path]                 Superseded by eas submit in eas-cli
+    client:ios [path]                 Superseded by Expo Dev Clients
+
+[15:23:52]   Run a command with --help for more info 💡
+[15:23:52]     $ expo start --help
+[15:23:52] service and verify the 3 final state and lock fixes from user message #434. The code is written but completely unverified. The app is considered broken until this is confirmed.
+-   **User Has Final Control**: The most significant recent change is the shift in control. The BC Agent can no longer complete a job. They submit for confirmation, and the User must press a Confirm Deposit Received button to finalize the transaction. All states and UI must reflect this new reality.
+-   **BC UI Hard Lock is CRITICAL**: The new  in  is essential for pilot stability. It prevents the BC Agent from navigating away and corrupting the state of an active job. You must verify this lock-and-unlock behavior thoroughly.
+-   **Scope is FROZEN**: The user has been emphatic. Do not add any new features, UI polish, or integrations. Only fix bugs if they are reported during the final validation.
 
 **documents created in this job**
-  - 
+  - No new documents were created in this session.  was from a previous session.
 
 **Last 10 User Messages and any pending HUMAN messages**
--   **Msg 366 (LATEST & PENDING):** Reported 8 critical, pilot-blocking bugs in the end-to-end flow (User and BC apps) and requested they be fixed in one pass. **(Status: IN PROGRESS - agent has written fixes, but they are unverified)**
--   **Msg 339:** Declared the User UI locked and verified and initiated the BC Agent MVP (Phase-1) with a minimal scope. **(Status: COMPLETED)**
--   **Msg 329:** Reported the final User Flow navigation edge case (Profile → History → Track Request → Back). **(Status: COMPLETED)**
--   **Msg 311:** Reported another User Flow navigation bug (Profile → History → Back). **(Status: COMPLETED)**
--   **Msg 295:** Confirmed the agent's first attempt to fix the History->Details->Back navigation failed and provided a clearer requirement. **(Status: COMPLETED)**
--   **Msg 279:** Reported the core User Flow navigation bug (History → Details → Back). **(Status: COMPLETED)**
--   **Msg 259:** Reported two P0 navigation bugs (History back button, FAQ back button). **(Status: COMPLETED)**
--   **Msg 245:** Reported two P0 navigation bugs (Post-deposit flow, Terms/Privacy back navigation). **(Status: COMPLETED)**
--   **Msg 225:** Reported P0 bugs related to state not refreshing on cancel and broken back navigation. **(Status: COMPLETED)**
--   **Msg 183:** Reported P0 logic bugs (incorrect time, cancelled deposits blocking, static pages in tabs). **(Status: COMPLETED)**
+-   **Msg 434 (LATEST & PENDING):** Reported 3 final pilot-blocking issues: BC gets an error after submitting, User gets a failed to load popup, and the BC UI needs a hard lock to prevent navigation during a transaction. **(Status: IN PROGRESS - agent has written fixes, but they are unverified)**
+-   **Msg 377:** Made a critical, final clarification: the USER must have final confirmation authority, not the BC agent. This is a control fix, not a new feature. **(Status: COMPLETED - agent implemented this change)**
+-   **Msg 358:** Completed validation and reported 3 final pilot-blocking issues: remove dev OTP text, fix user status sync speed, and separate BC earnings summary from history. **(Status: COMPLETED)**
+-   **Msg 356:** Acknowledged the agent's fixes and started the final end-to-end pilot validation. **(Status: COMPLETED)**
+-   **Msg 301:** Approved the agent's proposed final flow and scope definition, with minor clarifications. Authorized the agent to proceed with implementing ONLY the approved fixes. **(Status: COMPLETED)**
+-   **Msg 299:** Halted all work to demand alignment on the final pilot flow, principles, and scope. Asked for a step-by-step flow and a clear list of in-scope vs. out-of-scope items. **(Status: COMPLETED)**
+-   **Msg 244:** Acknowledged BC flow fixes but reported 6 new critical USER-side issues to be fixed. **(Status: COMPLETED)**
+-   **Msg 193:** Acknowledged progress but reported 6 new critical BC-side issues to be fixed. **(Status: COMPLETED)**
+-   **Msg 100:** Reported that the first batch of fixes resulted in major regressions and listed 4 new critical blockers. **(Status: COMPLETED)**
+-   **Msg 5:** Confirmed the initial plan to verify the 8 bugs and set a strict scope of no new features. **(Status: COMPLETED)**
 
 **Project Health Check:**
--   **Broken**: The BC Agent flow is in a broken/unverified state. The agent has applied fixes for critical bugs but has not restarted services or tested them.
+-   **Broken**: The application is in an unverified state. The final critical fixes for UI locking and state management have been coded but not tested. The app is not ready for user testing.
 -   **Mocked**:
     -   OTP generation and verification (uses dev bypass codes  and ).
-    -   Map/Location services (uses placeholder components, not Google Maps SDK).
-    -   In-app calling (uses a  placeholder).
+    -   Map/Location services (uses placeholder components and a static 20-25 mins ETA).
+    -   In-app calling (uses ).
+    -   BC Agent allocation (first-come, first-served, not location-based).
 
 **3rd Party Integrations**
 -   MSG91 (OTP) - Not integrated; logic is mocked in the backend.
@@ -263,86 +477,15 @@ expo: started) and thoroughly test the fixes for the 8 critical bugs listed in m
   - Testing agent used after significant changes: NO
   - Troubleshoot agent used after agent stuck in loop: NO
   - Test files created: []
-  - Known regressions: None known, but the last batch of fixes is large and unverified, so regressions are possible.
+  - Known regressions: None known, but the last unverified changes are significant and could introduce regressions in the BC navigation or state handling.
 
 **Credentials to test flow:**
--   **User/BC Agent Login Mobile Number**: Any 10-digit number.
--   **Login OTP**: 
+-   **User Login Mobile Number**: Any 10-digit number.
+-   **BC Agent Login Mobile Number**: 
+-   **Login OTP (for all numbers)**: 
 -   **Job Verification OTP (for BC to enter)**: 
 
 **What agent forgot to execute**
-- The agent wrote a significant amount of code to fix the 8 critical bugs from message #366 but did not restart the 
-  Usage: expo [command] [options]
-
-  Options:
-  
-    -V, --version                     output the version number
-    --non-interactive                 Fail, if an interactive prompt would be required to continue.
-    -h, --help                        output usage information
-  
-  Commands:
-
-    init [name]                       Create a new Expo project
-    start [path]                      Start a local dev server for the app
-    start:web [path]                  Start a Webpack dev server for the web app
-    export [path]                     Export the static files of the app for hosting it on a web server
-    install [packages...]             Install a module or other package to a project
-    run:android [path]                Run the Android app binary locally
-    run:ios [path]                    Run the iOS app binary locally
-    send [path]                       Share the project's URL to an email address
-
-    login                             Login to an Expo account
-    logout                            Logout of an Expo account
-    register                          Sign up for a new Expo account
-    whoami                            Return the currently authenticated account
-
-    client:install:ios                Install Expo Go for iOS on the simulator
-    client:install:android            Install Expo Go for Android on a connected device or emulator
-
-    config [path]                     Show the project config
-    doctor [path]                     Diagnose issues with the project
-    upgrade [sdk-version]             Upgrade the project packages and config for the given SDK version
-
-    customize:web [path]              Eject the default web files for customization
-    prebuild [path]                   Create native iOS and Android project files before building natively.
-                                      Learn more: https://docs.expo.dev/workflow/customizing/
-
-    build:web [path]                  Build the web app for production
-
-    credentials:manager [path]        Superseded by eas credentials in eas-cli
-
-    url [path]                        Log a URL for opening the project in Expo Go
-    url:ipa [path]                    Log the download URL for the standalone iOS binary
-    url:apk [path]                    Log the download URL for the standalone Android binary
-
-    webhooks [path]                   List all webhooks for a project
-    webhooks:add [path]               Add a webhook to a project
-    webhooks:remove [path]            Delete a webhook
-    webhooks:update [path]            Update an existing webhook
-
-    build:ios [path]                  Superseded by eas build in eas-cli
-    build:android [path]              Superseded by eas build in eas-cli
-    build:status [path]               Superseded by eas build:list in eas-cli
-    eject [path]                      Superseded by expo prebuild
-    fetch:ios:certs [path]            Superseded by eas credentials in eas-cli
-    fetch:android:keystore [path]     Superseded by eas credentials in eas-cli
-    fetch:android:hashes [path]       Superseded by eas credentials in eas-cli
-    fetch:android:upload-cert [path]  Superseded by eas credentials in eas-cli
-    publish [path]                    Superseded by eas update in eas-cli
-    publish:set [path]                Superseded by eas update:republish in eas-cli
-    publish:rollback [path]           Superseded by eas update:republish in eas-cli
-    publish:history [path]            Superseded by eas update:list in eas-cli
-    publish:details [path]            Superseded by eas update:view in eas-cli
-    push:android:upload [path]        Superseded by eas credentials in eas-cli
-    push:android:show [path]          Superseded by eas credentials in eas-cli
-    push:android:clear [path]         Superseded by eas credentials in eas-cli
-    upload:android [path]             Superseded by eas submit in eas-cli
-    upload:ios [path]                 Superseded by eas submit in eas-cli
-    client:ios [path]                 Superseded by Expo Dev Clients
-
-[03:28:48]   Run a command with --help for more info 💡
-[03:28:48]     $ expo start --help
-[03:28:48] and  services to apply the changes.
-- The agent did not perform any verification (API or UI) to confirm if the attempted fixes actually work. The immediate next step is to restart and test.
+- The agent has just finished writing the code for the final 3 critical fixes (BC UI lock, user polling fix, BC read-only state). The agent has **not yet restarted the services or performed any verification** to confirm if these fixes work. This is the mandatory next step.
 
 </analysis>
