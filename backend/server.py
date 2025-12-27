@@ -824,7 +824,7 @@ async def verify_job_otp(deposit_id: str, request: JobOTPVerify, current_user: d
 
 @api_router.post("/bc/jobs/{deposit_id}/complete")
 async def complete_job(deposit_id: str, current_user: dict = Depends(require_bc_agent)):
-    """Mark a job as completed"""
+    """Mark a job as completed - only after OTP verified and deposit made"""
     deposit = await db.deposits.find_one({"id": deposit_id})
     
     if not deposit:
@@ -833,8 +833,13 @@ async def complete_job(deposit_id: str, current_user: dict = Depends(require_bc_
     if deposit.get("bc_agent_id") != current_user["id"]:
         raise HTTPException(status_code=403, detail="This job is not assigned to you")
     
-    if deposit["status"] not in ["in_progress", "arrived", "cash_collected", "deposited"]:
-        raise HTTPException(status_code=400, detail="Job must be in progress to complete")
+    # OTP must be verified before completing
+    if not deposit.get("job_otp_verified"):
+        raise HTTPException(status_code=400, detail="You must verify customer OTP before completing the job")
+    
+    # Job must be in deposited status to complete
+    if deposit["status"] != "deposited":
+        raise HTTPException(status_code=400, detail="You must mark the deposit as made before completing the job")
     
     # Complete the job
     await db.deposits.update_one(
