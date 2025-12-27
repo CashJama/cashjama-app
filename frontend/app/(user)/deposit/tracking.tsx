@@ -79,6 +79,7 @@ export default function TrackingScreen() {
   useFocusEffect(useCallback(() => {
     fetchDeposit();
     // Poll every 5 seconds for real-time status updates from BC
+    // Stop polling for completed or awaiting_confirmation states
     const interval = setInterval(() => { 
       if (deposit && ['requested', 'agent_assigned', 'arrived', 'cash_collected', 'deposited'].includes(deposit.status)) { 
         fetchDeposit(); 
