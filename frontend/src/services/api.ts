@@ -132,6 +132,11 @@ class ApiService {
     return response.data;
   }
 
+  async confirmDeposit(depositId: string) {
+    const response = await this.instance.post(`/deposits/${depositId}/confirm-deposit`);
+    return response.data;
+  }
+
   // BC Agent endpoints
   async getAvailableJobs() {
     const response = await this.instance.get('/bc/jobs/available');
