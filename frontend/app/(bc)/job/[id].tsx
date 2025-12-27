@@ -398,7 +398,7 @@ export default function JobDetailsScreen() {
       </ScrollView>
 
       {/* Bottom Action */}
-      {!isCompleted && currentStep?.nextAction && (
+      {!isCompleted && !isAwaitingConfirmation && currentStep?.nextAction && (
         <View style={styles.bottomAction}>
           <TouchableOpacity
             style={styles.actionButton}
@@ -414,6 +414,19 @@ export default function JobDetailsScreen() {
               </>
             )}
           </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Awaiting User Confirmation - BC is read-only */}
+      {isAwaitingConfirmation && (
+        <View style={styles.bottomAction}>
+          <View style={styles.awaitingBadge}>
+            <Ionicons name="hourglass" size={24} color="#06B6D4" />
+            <View style={styles.awaitingTextContainer}>
+              <Text style={styles.awaitingTitle}>Awaiting User Confirmation</Text>
+              <Text style={styles.awaitingSubtitle}>Customer will confirm once deposit is verified</Text>
+            </View>
+          </View>
         </View>
       )}
 
