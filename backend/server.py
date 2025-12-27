@@ -783,7 +783,7 @@ async def reject_job(deposit_id: str, current_user: dict = Depends(require_bc_ag
 
 @api_router.post("/bc/jobs/{deposit_id}/verify-otp")
 async def verify_job_otp(deposit_id: str, request: JobOTPVerify, current_user: dict = Depends(require_bc_agent)):
-    """Verify OTP from user to start the job"""
+    """Verify OTP from user after arriving to collect cash"""
     deposit = await db.deposits.find_one({"id": deposit_id})
     
     if not deposit:
@@ -792,29 +792,29 @@ async def verify_job_otp(deposit_id: str, request: JobOTPVerify, current_user: d
     if deposit.get("bc_agent_id") != current_user["id"]:
         raise HTTPException(status_code=403, detail="This job is not assigned to you")
     
-    if deposit["status"] != "agent_assigned":
-        raise HTTPException(status_code=400, detail="Job is not in correct state for OTP verification")
+    # OTP can be verified when status is 'arrived'
+    if deposit["status"] != "arrived":
+        raise HTTPException(status_code=400, detail="You must mark yourself as 'Arrived' before verifying OTP")
     
-    # DEV MODE: Accept fixed OTP bypass
+    # DEV MODE: Accept fixed OTP bypass (1234)
     is_dev_otp = DEV_MODE and request.otp == DEV_OTP[:4]  # Use first 4 digits of dev OTP
     
     if not is_dev_otp and deposit.get("job_otp") != request.otp:
-        raise HTTPException(status_code=400, detail="Invalid OTP")
+        raise HTTPException(status_code=400, detail="Invalid OTP. Please check with customer.")
     
-    # Mark OTP as verified and start job
+    # Mark OTP as verified and move to cash_collected
     await db.deposits.update_one(
         {"id": deposit_id},
         {
             "$set": {
-                "status": "in_progress",
+                "status": "cash_collected",
                 "job_otp_verified": True,
-                "started_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow()
             }
         }
     )
     
-    logger.info(f"Job {deposit_id} OTP verified, job started")
+    logger.info(f"Job {deposit_id} OTP verified, cash collected by BC {current_user['id']}")
     
     return {
         "success": True,
