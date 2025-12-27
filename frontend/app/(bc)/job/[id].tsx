@@ -265,7 +265,8 @@ export default function JobDetailsScreen() {
   const currentStepIndex = getCurrentStepIndex();
   const currentStep = getCurrentStep();
   const isCompleted = job.status === 'completed';
-  const isLocked = ['cash_collected', 'deposited'].includes(job.status); // Lock after OTP verified
+  const isAwaitingConfirmation = job.status === 'awaiting_confirmation';
+  const isLocked = ['cash_collected', 'deposited', 'awaiting_confirmation'].includes(job.status); // Lock after OTP verified
   const alertIcon = getAlertIcon();
 
   return (
@@ -286,8 +287,20 @@ export default function JobDetailsScreen() {
       </View>
 
       {/* Lock Banner when locked */}
-      {isLocked && (
+      {isLocked && !isAwaitingConfirmation && (
         <View style={styles.lockBanner}>
+          <Ionicons name="shield-checkmark" size={18} color="#F59E0B" />
+          <Text style={styles.lockBannerText}>Cash collected. Complete the deposit to finish this job.</Text>
+        </View>
+      )}
+
+      {/* Awaiting confirmation banner */}
+      {isAwaitingConfirmation && (
+        <View style={[styles.lockBanner, { backgroundColor: 'rgba(6, 182, 212, 0.1)' }]}>
+          <Ionicons name="hourglass" size={18} color="#06B6D4" />
+          <Text style={[styles.lockBannerText, { color: '#06B6D4' }]}>Waiting for customer to confirm deposit receipt.</Text>
+        </View>
+      )}
           <Ionicons name="shield-checkmark" size={18} color="#F59E0B" />
           <Text style={styles.lockBannerText}>Cash collected. Complete the deposit to finish this job.</Text>
         </View>
