@@ -29,6 +29,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   useEffect(() => {
     loadStoredAuth();
+    
+    // Set up auth expiry callback
+    api.setOnAuthExpiry(() => {
+      console.log('Auth expired - clearing state');
+      setToken(null);
+      setUser(null);
+    });
   }, []);
 
   const loadStoredAuth = async () => {
