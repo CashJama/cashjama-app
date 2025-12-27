@@ -126,11 +126,11 @@ export default function TrackingScreen() {
           <Text style={styles.statusDescription}>{statusInfo.description}</Text>
         </View>
 
-        {deposit.job_otp && ['agent_assigned', 'in_progress'].includes(deposit.status) && (
+        {deposit.job_otp && ['agent_assigned', 'arrived', 'cash_collected', 'deposited', 'in_progress'].includes(deposit.status) && (
           <View style={styles.otpCard}>
-            <View style={styles.otpHeader}><Ionicons name="key" size={22} color="#10B981" /><Text style={styles.otpTitle}>Your OTP</Text></View>
+            <View style={styles.otpHeader}><Ionicons name="shield-checkmark" size={22} color="#10B981" /><Text style={styles.otpTitle}>Verification Code</Text></View>
             <Text style={styles.otpCode}>{deposit.job_otp}</Text>
-            <Text style={styles.otpNote}>Share this OTP only with the assigned BC agent to verify the transaction.</Text>
+            <Text style={styles.otpNote}>Share this code ONLY with the assigned BC agent to verify your transaction. Do NOT share with anyone else.</Text>
           </View>
         )}
 
