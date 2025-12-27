@@ -621,7 +621,7 @@ async def get_active_deposit(current_user: dict = Depends(get_current_user)):
     """Get current active deposit request for user - includes ALL active statuses until completed"""
     deposit = await db.deposits.find_one({
         "user_id": current_user["id"],
-        "status": {"$in": ["requested", "agent_assigned", "arrived", "cash_collected", "deposited"]}
+        "status": {"$in": ["requested", "agent_assigned", "arrived", "cash_collected", "deposited", "awaiting_confirmation"]}
     })
     
     if not deposit:
