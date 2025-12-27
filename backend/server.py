@@ -818,8 +818,8 @@ async def verify_job_otp(deposit_id: str, request: JobOTPVerify, current_user: d
     
     return {
         "success": True,
-        "message": "OTP verified. Job started.",
-        "status": "in_progress"
+        "message": "OTP verified. Cash collected.",
+        "status": "cash_collected"
     }
 
 @api_router.post("/bc/jobs/{deposit_id}/complete")
