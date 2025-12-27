@@ -858,7 +858,7 @@ async def complete_job(deposit_id: str, current_user: dict = Depends(require_bc_
 
 @api_router.post("/bc/jobs/{deposit_id}/update-status")
 async def update_job_status(deposit_id: str, status: str, current_user: dict = Depends(require_bc_agent)):
-    """Update job status: arrived, cash_collected, deposited, completed"""
+    """Update job status: arrived, deposited"""
     deposit = await db.deposits.find_one({"id": deposit_id})
     
     if not deposit:
@@ -867,14 +867,14 @@ async def update_job_status(deposit_id: str, status: str, current_user: dict = D
     if deposit.get("bc_agent_id") != current_user["id"]:
         raise HTTPException(status_code=403, detail="This job is not assigned to you")
     
-    # Valid status transitions
-    valid_statuses = ["arrived", "cash_collected", "deposited", "completed"]
+    # Valid status transitions (cash_collected is set via OTP verification)
+    valid_statuses = ["arrived", "deposited"]
     if status not in valid_statuses:
         raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid_statuses}")
     
     # Check valid transitions
     current_status = deposit["status"]
-    status_order = ["agent_assigned", "in_progress", "arrived", "cash_collected", "deposited", "completed"]
+    status_order = ["agent_assigned", "arrived", "cash_collected", "deposited", "completed"]
     
     if current_status not in status_order:
         raise HTTPException(status_code=400, detail="Job is not in a valid state for status update")
@@ -882,9 +882,9 @@ async def update_job_status(deposit_id: str, status: str, current_user: dict = D
     current_idx = status_order.index(current_status)
     new_idx = status_order.index(status)
     
-    # Allow forward progression only
-    if new_idx <= current_idx:
-        raise HTTPException(status_code=400, detail=f"Cannot move from {current_status} to {status}")
+    # Allow forward progression only (with one step at a time)
+    if new_idx != current_idx + 1:
+        raise HTTPException(status_code=400, detail=f"Cannot move from {current_status} to {status}. Follow the correct sequence.")
     
     update_data = {
         "status": status,
@@ -894,12 +894,8 @@ async def update_job_status(deposit_id: str, status: str, current_user: dict = D
     # Set timestamps based on status
     if status == "arrived":
         update_data["arrived_at"] = datetime.utcnow()
-    elif status == "cash_collected":
-        update_data["cash_collected_at"] = datetime.utcnow()
     elif status == "deposited":
         update_data["deposited_at"] = datetime.utcnow()
-    elif status == "completed":
-        update_data["completed_at"] = datetime.utcnow()
     
     await db.deposits.update_one({"id": deposit_id}, {"$set": update_data})
     
