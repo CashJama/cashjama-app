@@ -366,6 +366,12 @@ const styles = StyleSheet.create({
   cancelButtonText: { fontSize: 15, fontWeight: '600', color: '#EF4444' },
   noCancelNote: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: 'rgba(245, 158, 11, 0.1)', borderRadius: 12, padding: 14, marginBottom: 16, gap: 10 },
   noCancelText: { flex: 1, fontSize: 13, color: '#F59E0B', lineHeight: 20 },
+  // Confirm deposit section
+  confirmSection: { marginBottom: 16 },
+  confirmBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(16, 185, 129, 0.1)', borderRadius: 12, padding: 14, gap: 10, marginBottom: 12 },
+  confirmBannerText: { flex: 1, fontSize: 14, color: '#10B981', fontWeight: '500', lineHeight: 20 },
+  confirmButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#10B981', borderRadius: 12, paddingVertical: 16, gap: 10 },
+  confirmButtonText: { fontSize: 16, fontWeight: '700', color: '#FFFFFF' },
   receiptNote: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#1F2937', borderRadius: 12, padding: 14 },
   receiptNoteText: { flex: 1, fontSize: 12, color: '#9CA3AF', marginLeft: 10, lineHeight: 18 },
   // Modal styles
