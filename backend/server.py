@@ -861,6 +861,41 @@ async def complete_job(deposit_id: str, current_user: dict = Depends(require_bc_
         "earnings": deposit["service_fee"]
     }
 
+@api_router.post("/deposits/{deposit_id}/confirm-deposit")
+async def user_confirm_deposit(deposit_id: str, current_user: dict = Depends(get_current_user)):
+    """User confirms they received the deposit - final step to complete job"""
+    deposit = await db.deposits.find_one({"id": deposit_id})
+    
+    if not deposit:
+        raise HTTPException(status_code=404, detail="Deposit not found")
+    
+    if deposit.get("user_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="This deposit does not belong to you")
+    
+    # Must be in awaiting_confirmation status
+    if deposit["status"] != "awaiting_confirmation":
+        raise HTTPException(status_code=400, detail="Deposit is not awaiting confirmation")
+    
+    # User confirms - job is now completed
+    await db.deposits.update_one(
+        {"id": deposit_id},
+        {
+            "$set": {
+                "status": "completed",
+                "completed_at": datetime.utcnow(),
+                "user_confirmed_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            }
+        }
+    )
+    
+    logger.info(f"Deposit {deposit_id} confirmed by user {current_user['id']} - job completed")
+    
+    return {
+        "success": True,
+        "message": "Deposit confirmed. Thank you for using CashJama!"
+    }
+
 @api_router.post("/bc/jobs/{deposit_id}/update-status")
 async def update_job_status(deposit_id: str, status: str, current_user: dict = Depends(require_bc_agent)):
     """Update job status: arrived, deposited"""
