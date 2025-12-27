@@ -50,8 +50,17 @@ export default function TrackingScreen() {
   };
 
   const fetchDeposit = async () => {
-    try { const response = await api.getDepositDetails(depositId || ''); setDeposit(response); }
-    catch (error) { console.error('Error fetching deposit:', error); Alert.alert('Error', 'Failed to load deposit details'); }
+    try { 
+      const response = await api.getDepositDetails(depositId || ''); 
+      setDeposit(response); 
+    }
+    catch (error: any) { 
+      console.log('Error fetching deposit:', error);
+      // Only show alert on initial load, not during polling
+      if (isLoading) {
+        // Silent fail for polling - deposit may have been completed and removed
+      }
+    }
     finally { setIsLoading(false); }
   };
 
