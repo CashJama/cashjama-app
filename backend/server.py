@@ -677,7 +677,7 @@ async def get_assigned_jobs(current_user: dict = Depends(require_bc_agent)):
     """Get jobs assigned to current BC agent (all active statuses until completed)"""
     jobs = await db.deposits.find({
         "bc_agent_id": current_user["id"],
-        "status": {"$in": ["agent_assigned", "in_progress", "arrived", "cash_collected", "deposited"]}
+        "status": {"$in": ["agent_assigned", "in_progress", "arrived", "cash_collected", "deposited", "awaiting_confirmation"]}
     }).sort("assigned_at", -1).to_list(20)
     
     return {
