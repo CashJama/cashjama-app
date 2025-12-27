@@ -101,13 +101,13 @@ export default function JobDetailsScreen() {
       return;
     }
 
-    // Verify OTP first
+    // Verify OTP - backend automatically updates status to cash_collected
     setIsUpdating(true);
     try {
       await api.verifyJobOTP(id, otpInput);
       setShowOtpModal(false);
-      // Now update status to cash_collected
-      await api.updateJobStatus(id, 'cash_collected');
+      setOtpInput('');
+      setOtpError('');
       loadJob();
       Alert.alert('Success', 'OTP verified. Cash collection confirmed!');
     } catch (error: any) {
