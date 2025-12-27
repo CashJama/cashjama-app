@@ -235,6 +235,20 @@ export default function TrackingScreen() {
           </View>
         )}
 
+        {/* User Confirm Deposit Button - shown when awaiting confirmation */}
+        {deposit.status === 'awaiting_confirmation' && (
+          <View style={styles.confirmSection}>
+            <View style={styles.confirmBanner}>
+              <Ionicons name="checkmark-done-circle" size={24} color="#10B981" />
+              <Text style={styles.confirmBannerText}>BC has completed the deposit. Please verify and confirm.</Text>
+            </View>
+            <TouchableOpacity style={styles.confirmButton} onPress={handleConfirmDeposit}>
+              <Ionicons name="checkmark-circle" size={24} color="#FFFFFF" />
+              <Text style={styles.confirmButtonText}>Confirm Deposit Received</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {deposit.status === 'completed' && (
           <View style={styles.receiptNote}><Ionicons name="information-circle" size={20} color="#6B7280" /><Text style={styles.receiptNoteText}>This is NOT a bank receipt. Your cash has been deposited directly to your bank via authorized BC.</Text></View>
         )}
