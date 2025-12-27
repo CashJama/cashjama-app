@@ -179,6 +179,13 @@ export default function TrackingScreen() {
           <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}><Ionicons name="close-circle" size={20} color="#EF4444" /><Text style={styles.cancelButtonText}>Cancel Request</Text></TouchableOpacity>
         )}
 
+        {['arrived', 'cash_collected', 'deposited'].includes(deposit.status) && (
+          <View style={styles.noCancelNote}>
+            <Ionicons name="information-circle" size={20} color="#F59E0B" />
+            <Text style={styles.noCancelText}>Cancellation is not allowed after the agent has arrived. Please complete the transaction or contact support.</Text>
+          </View>
+        )}
+
         {deposit.status === 'completed' && (
           <View style={styles.receiptNote}><Ionicons name="information-circle" size={20} color="#6B7280" /><Text style={styles.receiptNoteText}>This is NOT a bank receipt. Your cash has been deposited directly to your bank via authorized BC.</Text></View>
         )}
