@@ -637,15 +637,16 @@ const styles = StyleSheet.create({
   customerDetails: { marginLeft: 12, flex: 1 },
   customerName: { fontSize: 18, fontWeight: '600', color: '#FFFFFF' },
   customerMobile: { fontSize: 14, color: '#9CA3AF', marginTop: 2 },
-  callNote: {
+  callCustomerButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1F2937',
-    padding: 10,
-    borderRadius: 8,
+    justifyContent: 'center',
+    backgroundColor: '#10B981',
+    paddingVertical: 12,
+    borderRadius: 10,
     gap: 8,
   },
-  callNoteText: { fontSize: 13, color: '#9CA3AF' },
+  callCustomerText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
   locationCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
