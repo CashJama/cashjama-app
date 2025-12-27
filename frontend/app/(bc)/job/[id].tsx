@@ -264,20 +264,43 @@ export default function JobDetailsScreen() {
   const currentStepIndex = getCurrentStepIndex();
   const currentStep = getCurrentStep();
   const isCompleted = job.status === 'completed';
+  const isLocked = ['cash_collected', 'deposited'].includes(job.status); // Lock after OTP verified
   const alertIcon = getAlertIcon();
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
+      {/* Header - hide back button when locked */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
-        </TouchableOpacity>
+        {!isLocked ? (
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.lockedIndicator}>
+            <Ionicons name="lock-closed" size={18} color="#F59E0B" />
+          </View>
+        )}
         <Text style={styles.headerTitle}>Job Details</Text>
         <View style={{ width: 44 }} />
       </View>
 
+      {/* Lock Banner when locked */}
+      {isLocked && (
+        <View style={styles.lockBanner}>
+          <Ionicons name="shield-checkmark" size={18} color="#F59E0B" />
+          <Text style={styles.lockBannerText}>Cash collected. Complete the deposit to finish this job.</Text>
+        </View>
+      )}
+
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* ETA Display - only for assigned status */}
+        {job.status === 'agent_assigned' && (
+          <View style={styles.etaBanner}>
+            <Ionicons name="time" size={20} color="#F59E0B" />
+            <Text style={styles.etaBannerText}>ETA to customer: 20-25 mins</Text>
+          </View>
+        )}
+
         {/* Clear Fee Breakdown Card */}
         <View style={styles.breakdownCard}>
           <Text style={styles.breakdownTitle}>Job Summary</Text>
@@ -312,10 +335,13 @@ export default function JobDetailsScreen() {
                 <Text style={styles.customerMobile}>{getMaskedPhone(job.user_mobile)}</Text>
               </View>
             </View>
-            <View style={styles.callNote}>
-              <Ionicons name="shield-checkmark" size={16} color="#9CA3AF" />
-              <Text style={styles.callNoteText}>Contact via app only</Text>
-            </View>
+            <TouchableOpacity 
+              style={styles.callCustomerButton}
+              onPress={() => Linking.openURL(`tel:${job.user_mobile?.replace(/\*/g, '0')}`)}
+            >
+              <Ionicons name="call" size={18} color="#FFFFFF" />
+              <Text style={styles.callCustomerText}>Call Customer</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
