@@ -441,6 +441,17 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   acceptButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  blockedButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#374151',
+    paddingVertical: 14,
+    borderRadius: 12,
+    gap: 8,
+    marginTop: 4,
+  },
+  blockedButtonText: { fontSize: 16, fontWeight: '600', color: '#9CA3AF' },
   offlineMessage: {
     flexDirection: 'row',
     alignItems: 'center',
