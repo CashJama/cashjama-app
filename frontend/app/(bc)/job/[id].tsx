@@ -441,11 +441,22 @@ export default function JobDetailsScreen() {
         </View>
       )}
 
+      {/* Completed State - Read-only informational banner, NO actions */}
       {isCompleted && (
         <View style={styles.bottomAction}>
-          <View style={styles.completedBadge}>
-            <Ionicons name="checkmark-circle" size={24} color="#10B981" />
-            <Text style={styles.completedText}>Job Completed</Text>
+          <View style={styles.completedBanner}>
+            <View style={styles.completedIconRow}>
+              <Ionicons name="checkmark-circle" size={32} color="#10B981" />
+              <Text style={styles.completedTitle}>Job Completed</Text>
+            </View>
+            <Text style={styles.completedSubtitle}>Customer has confirmed the deposit. You earned ₹{job?.service_fee}.</Text>
+            <TouchableOpacity 
+              style={styles.goBackButton}
+              onPress={() => router.push('/(bc)/home')}
+            >
+              <Ionicons name="home" size={18} color="#FFFFFF" />
+              <Text style={styles.goBackButtonText}>Back to Home</Text>
+            </TouchableOpacity>
           </View>
         </View>
       )}
