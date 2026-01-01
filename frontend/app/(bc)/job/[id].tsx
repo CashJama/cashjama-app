@@ -192,10 +192,11 @@ export default function JobDetailsScreen() {
     setShowAlertModal(false);
     setIsUpdating(true);
     try {
-      if (nextStatus === 'completed') {
+      // Use completeJob endpoint for final submission (deposited -> awaiting_confirmation)
+      if (nextStatus === 'awaiting_confirmation') {
         await api.completeJob(id);
-        showDarkAlert('success', 'Job Completed!', `You earned ${RUPEE}${job?.service_fee} for this job.`, () => {
-          router.back();
+        showDarkAlert('success', 'Submitted!', `Waiting for customer confirmation. You will earn ${RUPEE}${job?.service_fee} once confirmed.`, () => {
+          loadJob();
         });
       } else {
         await api.updateJobStatus(id, nextStatus);
