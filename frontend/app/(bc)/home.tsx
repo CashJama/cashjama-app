@@ -112,6 +112,11 @@ export default function BCHomeScreen() {
       setIsOnline(onlineRes.is_online || false);
       setAvailableJobs(availableRes.jobs || []);
       setAssignedJobs(assignedRes.jobs || []);
+      
+      // Show warning if there are stale jobs
+      if (assignedRes.warning && !silent) {
+        console.log('[BC Home] Warning:', assignedRes.warning);
+      }
     } catch (error) {
       console.log('Error loading data:', error);
     } finally {
