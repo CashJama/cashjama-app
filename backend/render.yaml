@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: cashjama-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    region: singapore  # or oregon, frankfurt - choose closest to users
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: MONGODB_URI
+        sync: false  # You'll set this manually in Render dashboard
+      - key: DB_NAME
+        value: cashjama
+      - key: JWT_SECRET
+        generateValue: true  # Render will auto-generate a secure value
+      - key: DEV_MODE
+        value: "true"  # Keep true for mock OTP, set false when MSG91 is ready
+      - key: MSG91_API_KEY
+        sync: false  # Set when ready for real OTP
+      - key: MSG91_TEMPLATE_ID
+        sync: false
+      - key: MSG91_SENDER_ID
+        value: CASHJM
