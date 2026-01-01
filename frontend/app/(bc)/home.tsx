@@ -322,13 +322,20 @@ export default function BCHomeScreen() {
                     <Text style={styles.infoText}>{formatTime(job.created_at)}</Text>
                   </View>
                 </View>
-                <TouchableOpacity
-                  style={styles.acceptButton}
-                  onPress={() => handleAcceptJob(job.id)}
-                >
-                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                  <Text style={styles.acceptButtonText}>Accept Job</Text>
-                </TouchableOpacity>
+                {assignedJobs.length > 0 ? (
+                  <View style={styles.blockedButton}>
+                    <Ionicons name="lock-closed" size={18} color="#9CA3AF" />
+                    <Text style={styles.blockedButtonText}>Complete current job first</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={styles.acceptButton}
+                    onPress={() => handleAcceptJob(job.id)}
+                  >
+                    <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                    <Text style={styles.acceptButtonText}>Accept Job</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             ))
           )}
