@@ -316,6 +316,54 @@ export default function TrackingScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Success Modal */}
+      <Modal visible={showSuccessModal} transparent animationType="fade" onRequestClose={() => {}}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={[styles.modalIconContainer, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+              <Ionicons name="checkmark-circle" size={48} color="#10B981" />
+            </View>
+            <Text style={styles.modalTitle}>Deposit Confirmed!</Text>
+            <Text style={styles.modalMessage}>Thank you for using CashJama. Your deposit has been successfully confirmed.</Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={[styles.modalConfirmButton, { backgroundColor: '#10B981', flex: 1 }]} 
+                onPress={() => {
+                  setShowSuccessModal(false);
+                  router.push('/(user)/home');
+                }}
+              >
+                <Text style={styles.modalConfirmButtonText}>Go to Home</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Error Modal */}
+      <Modal visible={showErrorModal} transparent animationType="fade" onRequestClose={() => setShowErrorModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={[styles.modalIconContainer, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
+              <Ionicons name="alert-circle" size={48} color="#EF4444" />
+            </View>
+            <Text style={styles.modalTitle}>Error</Text>
+            <Text style={styles.modalMessage}>{errorMessage}</Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={[styles.modalConfirmButton, { backgroundColor: '#EF4444', flex: 1 }]} 
+                onPress={() => {
+                  setShowErrorModal(false);
+                  fetchDeposit(); // Refresh to get latest state
+                }}
+              >
+                <Text style={styles.modalConfirmButtonText}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
