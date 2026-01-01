@@ -427,16 +427,17 @@ export default function JobDetailsScreen() {
         </View>
       )}
 
-      {/* Awaiting User Confirmation - BC is read-only */}
+      {/* Awaiting User Confirmation - BC is read-only, no actions available */}
       {isAwaitingConfirmation && (
         <View style={styles.bottomAction}>
           <View style={styles.awaitingBadge}>
-            <Ionicons name="hourglass" size={24} color="#06B6D4" />
+            <ActivityIndicator size="small" color="#06B6D4" style={{ marginRight: 12 }} />
             <View style={styles.awaitingTextContainer}>
-              <Text style={styles.awaitingTitle}>Awaiting User Confirmation</Text>
-              <Text style={styles.awaitingSubtitle}>Customer will confirm once deposit is verified</Text>
+              <Text style={styles.awaitingTitle}>Waiting for User Confirmation</Text>
+              <Text style={styles.awaitingSubtitle}>Customer must verify bank deposit to complete</Text>
             </View>
           </View>
+          <Text style={styles.awaitingNote}>You cannot proceed until the customer confirms. No further actions available.</Text>
         </View>
       )}
 
