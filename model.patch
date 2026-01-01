@@ -1,81 +1,136 @@
-diff --git a/frontend/app/(user)/history.tsx b/frontend/app/(user)/history.tsx
-index 7602620..b460017 100644
---- a/frontend/app/(user)/history.tsx
-+++ b/frontend/app/(user)/history.tsx
-@@ -9,7 +9,7 @@ import {
-   ActivityIndicator,
- } from 'react-native';
- import { SafeAreaView } from 'react-native-safe-area-context';
--import { useRouter } from 'expo-router';
-+import { useRouter, useLocalSearchParams } from 'expo-router';
- import { Ionicons } from '@expo/vector-icons';
- import { api } from '../../src/services/api';
- 
+diff --git a/frontend/app/(bc)/home.tsx b/frontend/app/(bc)/home.tsx
+index 9411e78..45559a2 100644
+--- a/frontend/app/(bc)/home.tsx
++++ b/frontend/app/(bc)/home.tsx
+@@ -322,13 +322,20 @@ export default function BCHomeScreen() {
+                     <Text style={styles.infoText}>{formatTime(job.created_at)}</Text>
+                   </View>
+                 </View>
+-                <TouchableOpacity
+-                  style={styles.acceptButton}
+-                  onPress={() => handleAcceptJob(job.id)}
+-                >
+-                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+-                  <Text style={styles.acceptButtonText}>Accept Job</Text>
+-                </TouchableOpacity>
++                {assignedJobs.length > 0 ? (
++                  <View style={styles.blockedButton}>
++                    <Ionicons name="lock-closed" size={18} color="#9CA3AF" />
++                    <Text style={styles.blockedButtonText}>Complete current job first</Text>
++                  </View>
++                ) : (
++                  <TouchableOpacity
++                    style={styles.acceptButton}
++                    onPress={() => handleAcceptJob(job.id)}
++                  >
++                    <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
++                    <Text style={styles.acceptButtonText}>Accept Job</Text>
++                  </TouchableOpacity>
++                )}
+               </View>
+             ))
+           )}
+@@ -441,6 +448,17 @@ const styles = StyleSheet.create({
+     marginTop: 4,
+   },
+   acceptButtonText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
++  blockedButton: {
++    flexDirection: 'row',
++    alignItems: 'center',
++    justifyContent: 'center',
++    backgroundColor: '#374151',
++    paddingVertical: 14,
++    borderRadius: 12,
++    gap: 8,
++    marginTop: 4,
++  },
++  blockedButtonText: { fontSize: 16, fontWeight: '600', color: '#9CA3AF' },
+   offlineMessage: {
+     flexDirection: 'row',
+     alignItems: 'center',
 diff --git a/model.patch b/model.patch
-index 6b39bdf..e69de29 100644
+index 6e47ddc..e69de29 100644
 --- a/model.patch
 +++ b/model.patch
-@@ -1,63 +0,0 @@
+@@ -1,81 +0,0 @@
 -diff --git a/frontend/app/(user)/history.tsx b/frontend/app/(user)/history.tsx
--index 51489f1..6dae93e 100644
+-index 7602620..b460017 100644
 ---- a/frontend/app/(user)/history.tsx
 -+++ b/frontend/app/(user)/history.tsx
--@@ -12,12 +12,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
-- import { useRouter } from 'expo-router';
+-@@ -9,7 +9,7 @@ import {
+-   ActivityIndicator,
+- } from 'react-native';
+- import { SafeAreaView } from 'react-native-safe-area-context';
+--import { useRouter } from 'expo-router';
+-+import { useRouter, useLocalSearchParams } from 'expo-router';
 - import { Ionicons } from '@expo/vector-icons';
 - import { api } from '../../src/services/api';
---import { format } from 'date-fns';
 - 
---// Helper function to format time to local timezone
--+// Helper function to format UTC timestamp to device local time
-- const formatLocalDateTime = (dateStr: string) => {
--   const date = new Date(dateStr);
---  return format(date, 'MMM dd, yyyy • hh:mm a');
--+  return date.toLocaleDateString('en-IN', {
--+    month: 'short',
--+    day: '2-digit',
--+    year: 'numeric',
--+  }) + ' • ' + date.toLocaleTimeString('en-IN', {
--+    hour: '2-digit',
--+    minute: '2-digit',
--+    hour12: true
--+  });
-- };
-- 
-- interface Deposit {
 -diff --git a/model.patch b/model.patch
--index b8d02d5..e69de29 100644
+-index 6b39bdf..e69de29 100644
 ---- a/model.patch
 -+++ b/model.patch
--@@ -1,31 +0,0 @@
+-@@ -1,63 +0,0 @@
+--diff --git a/frontend/app/(user)/history.tsx b/frontend/app/(user)/history.tsx
+--index 51489f1..6dae93e 100644
+----- a/frontend/app/(user)/history.tsx
+--+++ b/frontend/app/(user)/history.tsx
+--@@ -12,12 +12,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
+-- import { useRouter } from 'expo-router';
+-- import { Ionicons } from '@expo/vector-icons';
+-- import { api } from '../../src/services/api';
+---import { format } from 'date-fns';
+-- 
+---// Helper function to format time to local timezone
+--+// Helper function to format UTC timestamp to device local time
+-- const formatLocalDateTime = (dateStr: string) => {
+--   const date = new Date(dateStr);
+---  return format(date, 'MMM dd, yyyy • hh:mm a');
+--+  return date.toLocaleDateString('en-IN', {
+--+    month: 'short',
+--+    day: '2-digit',
+--+    year: 'numeric',
+--+  }) + ' • ' + date.toLocaleTimeString('en-IN', {
+--+    hour: '2-digit',
+--+    minute: '2-digit',
+--+    hour12: true
+--+  });
+-- };
+-- 
+-- interface Deposit {
 --diff --git a/model.patch b/model.patch
---index f8aa5bf..e69de29 100644
+--index b8d02d5..e69de29 100644
 ----- a/model.patch
 --+++ b/model.patch
---@@ -1,26 +0,0 @@
----diff --git a/frontend/app/(user)/history.tsx b/frontend/app/(user)/history.tsx
----index d3b7701..51489f1 100644
------- a/frontend/app/(user)/history.tsx
----+++ b/frontend/app/(user)/history.tsx
----@@ -14,6 +14,12 @@ import { Ionicons } from '@expo/vector-icons';
---- import { api } from '../../src/services/api';
---- import { format } from 'date-fns';
---- 
----+// Helper function to format time to local timezone
----+const formatLocalDateTime = (dateStr: string) => {
----+  const date = new Date(dateStr);
----+  return format(date, 'MMM dd, yyyy • hh:mm a');
----+};
----+
---- interface Deposit {
----   id: string;
----   amount: number;
----@@ -94,7 +100,7 @@ export default function HistoryScreen() {
----         </View>
----         <View style={styles.depositInfo}>
----           <Text style={styles.depositAmount}>₹{item.amount.toLocaleString()}</Text>
-----          <Text style={styles.depositDate}>{format(new Date(item.created_at), 'MMM dd, yyyy • hh:mm a')}</Text>
----+          <Text style={styles.depositDate}>{formatLocalDateTime(item.created_at)}</Text>
----         </View>
----         <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(item.status)}20` }]}>
----           <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{getStatusLabel(item.status)}</Text>
+--@@ -1,31 +0,0 @@
+---diff --git a/model.patch b/model.patch
+---index f8aa5bf..e69de29 100644
+------ a/model.patch
+---+++ b/model.patch
+---@@ -1,26 +0,0 @@
+----diff --git a/frontend/app/(user)/history.tsx b/frontend/app/(user)/history.tsx
+----index d3b7701..51489f1 100644
+------- a/frontend/app/(user)/history.tsx
+----+++ b/frontend/app/(user)/history.tsx
+----@@ -14,6 +14,12 @@ import { Ionicons } from '@expo/vector-icons';
+---- import { api } from '../../src/services/api';
+---- import { format } from 'date-fns';
+---- 
+----+// Helper function to format time to local timezone
+----+const formatLocalDateTime = (dateStr: string) => {
+----+  const date = new Date(dateStr);
+----+  return format(date, 'MMM dd, yyyy • hh:mm a');
+----+};
+----+
+---- interface Deposit {
+----   id: string;
+----   amount: number;
+----@@ -94,7 +100,7 @@ export default function HistoryScreen() {
+----         </View>
+----         <View style={styles.depositInfo}>
+----           <Text style={styles.depositAmount}>₹{item.amount.toLocaleString()}</Text>
+-----          <Text style={styles.depositDate}>{format(new Date(item.created_at), 'MMM dd, yyyy • hh:mm a')}</Text>
+----+          <Text style={styles.depositDate}>{formatLocalDateTime(item.created_at)}</Text>
+----         </View>
+----         <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(item.status)}20` }]}>
+----           <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>{getStatusLabel(item.status)}</Text>
