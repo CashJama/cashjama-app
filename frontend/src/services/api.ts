@@ -1,7 +1,26 @@
 import axios, { AxiosInstance } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
+// Get backend URL from multiple sources with fallbacks
+const getBackendUrl = (): string => {
+  // Try expo-constants first (most reliable in Expo Go)
+  const expoConfig = Constants.expoConfig?.extra?.backendUrl;
+  if (expoConfig) return expoConfig;
+  
+  // Try process.env (works in some builds)
+  const envUrl = process.env.EXPO_PUBLIC_BACKEND_URL;
+  if (envUrl) return envUrl;
+  
+  // Fallback: Use relative URL (works when frontend/backend on same domain)
+  // For Expo Go on real device, this will be empty and we use the proxy
+  return '';
+};
+
+const BACKEND_URL = getBackendUrl();
+
+// Log the URL for debugging (remove in production)
+console.log('[API] Backend URL:', BACKEND_URL || '(using relative /api)');
 
 // Callback for auth expiry - will be set by AuthContext
 let onAuthExpiry: (() => void) | null = null;
@@ -11,13 +30,18 @@ class ApiService {
   private authToken: string | null = null;
 
   constructor() {
+    // If BACKEND_URL is empty, use relative path (for same-origin requests)
+    const baseURL = BACKEND_URL ? `${BACKEND_URL}/api` : '/api';
+    
     this.instance = axios.create({
-      baseURL: `${BACKEND_URL}/api`,
+      baseURL,
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json',
       },
     });
+    
+    console.log('[API] Axios baseURL:', baseURL);
 
     // Request interceptor
     this.instance.interceptors.request.use(
