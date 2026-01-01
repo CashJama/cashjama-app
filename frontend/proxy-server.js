@@ -1,0 +1,49 @@
+const { createProxyMiddleware } = require('http-proxy-middleware');
+const http = require('http');
+const httpProxy = require('http-proxy');
+
+// Create a proxy to the backend
+const apiProxy = httpProxy.createProxyServer({
+  target: 'http://localhost:8001',
+  changeOrigin: true,
+});
+
+// Create a proxy to the expo server
+const expoProxy = httpProxy.createProxyServer({
+  target: 'http://localhost:19006', // Expo's actual server port
+  ws: true,
+  changeOrigin: true,
+});
+
+const server = http.createServer((req, res) => {
+  console.log(`[Proxy] ${req.method} ${req.url}`);
+  
+  if (req.url.startsWith('/api')) {
+    // Forward /api/* requests to backend on port 8001
+    console.log(`[Proxy] Forwarding to backend: ${req.url}`);
+    apiProxy.web(req, res, {}, (err) => {
+      console.error('[Proxy] Backend error:', err.message);
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Backend unavailable', detail: err.message }));
+    });
+  } else {
+    // Forward all other requests to expo
+    expoProxy.web(req, res, {}, (err) => {
+      console.error('[Proxy] Expo error:', err.message);
+      res.writeHead(502, { 'Content-Type': 'text/plain' });
+      res.end('Expo server unavailable');
+    });
+  }
+});
+
+// Handle WebSocket upgrades (for hot reload)
+server.on('upgrade', (req, socket, head) => {
+  expoProxy.ws(req, socket, head);
+});
+
+const PORT = 3000;
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`[Proxy] API proxy server running on port ${PORT}`);
+  console.log(`[Proxy] /api/* -> http://localhost:8001`);
+  console.log(`[Proxy] /* -> http://localhost:19006 (expo)`);
+});
