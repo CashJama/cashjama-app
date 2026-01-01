@@ -674,15 +674,26 @@ async def get_available_jobs(current_user: dict = Depends(require_bc_agent)):
 
 @api_router.get("/bc/jobs/assigned")
 async def get_assigned_jobs(current_user: dict = Depends(require_bc_agent)):
-    """Get jobs assigned to current BC agent (all active statuses until completed)"""
-    jobs = await db.deposits.find({
+    """Get jobs assigned to current BC agent - returns ONLY ONE active job (earliest by assigned_at)"""
+    # Fetch all active jobs
+    all_jobs = await db.deposits.find({
         "bc_agent_id": current_user["id"],
-        "status": {"$in": ["agent_assigned", "in_progress", "arrived", "cash_collected", "deposited", "awaiting_confirmation"]}
-    }).sort("assigned_at", -1).to_list(20)
+        "status": {"$in": ["agent_assigned", "arrived", "cash_collected", "deposited", "awaiting_confirmation"]}
+    }).sort("assigned_at", 1).to_list(100)  # Sort ascending to get earliest first
+    
+    # Return only the first (earliest) active job - BC must have AT MOST ONE active job
+    if all_jobs:
+        primary_job = all_jobs[0]
+        extra_jobs_count = len(all_jobs) - 1
+        return {
+            "jobs": [serialize_doc(primary_job)],
+            "count": 1,
+            "warning": f"You have {extra_jobs_count} other stale job(s) that need resolution" if extra_jobs_count > 0 else None
+        }
     
     return {
-        "jobs": [serialize_doc(job) for job in jobs],
-        "count": len(jobs)
+        "jobs": [],
+        "count": 0
     }
 
 @api_router.get("/bc/jobs/history")
