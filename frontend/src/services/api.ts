@@ -1,11 +1,11 @@
 import axios, { AxiosInstance } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// HARDCODED BACKEND URL for pilot testing
-// This eliminates all environment variable complexity
-const BACKEND_URL = 'https://a2e708c3-b75c-4511-98cf-c9a89e600d56-8001.preview.emergentagent.com';
+// Use the frontend URL with /api path - the platform proxy routes /api/* to backend port 8001
+// This works both in web preview and in Expo Go via tunnel
+const BACKEND_URL = 'https://a2e708c3-b75c-4511-98cf-c9a89e600d56-3000.preview.emergentagent.com';
 
-console.log('[API] Backend URL:', BACKEND_URL);
+console.log('[API] Using proxy URL:', BACKEND_URL);
 
 // Callback for auth expiry - will be set by AuthContext
 let onAuthExpiry: (() => void) | null = null;
@@ -15,6 +15,7 @@ class ApiService {
   private authToken: string | null = null;
 
   constructor() {
+    // Use /api path - platform proxy routes this to backend
     const baseURL = `${BACKEND_URL}/api`;
     
     this.instance = axios.create({
