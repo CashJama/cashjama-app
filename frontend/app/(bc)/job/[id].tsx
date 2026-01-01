@@ -755,6 +755,7 @@ const styles = StyleSheet.create({
   awaitingTextContainer: { flex: 1 },
   awaitingTitle: { fontSize: 16, fontWeight: '700', color: '#06B6D4' },
   awaitingSubtitle: { fontSize: 13, color: '#9CA3AF', marginTop: 2 },
+  awaitingNote: { fontSize: 12, color: '#6B7280', textAlign: 'center', marginTop: 12, fontStyle: 'italic' },
   // OTP Modal
   otpOverlay: {
     position: 'absolute',
