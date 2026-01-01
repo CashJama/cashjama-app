@@ -709,14 +709,18 @@ async def accept_job(deposit_id: str, current_user: dict = Depends(require_bc_ag
     if deposit["status"] != "requested":
         raise HTTPException(status_code=400, detail="Job is no longer available")
     
-    # Check if BC already has an active job
+    # Check if BC already has an active job (any non-completed/cancelled state)
+    active_statuses = ["agent_assigned", "arrived", "cash_collected", "deposited", "awaiting_confirmation"]
     existing_job = await db.deposits.find_one({
         "bc_agent_id": current_user["id"],
-        "status": {"$in": ["agent_assigned", "in_progress"]}
+        "status": {"$in": active_statuses}
     })
     
     if existing_job:
-        raise HTTPException(status_code=400, detail="You already have an active job. Complete it first.")
+        raise HTTPException(
+            status_code=400, 
+            detail=f"You already have an active job (ID: {existing_job['id'][:8]}...). Complete it before accepting a new one."
+        )
     
     # Generate job OTP (4 digits for simplicity)
     job_otp = ''.join(random.choices(string.digits, k=4))
