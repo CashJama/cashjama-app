@@ -69,15 +69,23 @@ export default function TrackingScreen() {
   };
 
   const confirmDepositReceived = async () => {
+    console.log('[Tracking] Confirming deposit:', depositId);
     setIsConfirming(true);
     try {
-      await api.confirmDeposit(depositId || '');
+      const result = await api.confirmDeposit(depositId || '');
+      console.log('[Tracking] Confirm API result:', result);
       setShowConfirmModal(false);
-      Alert.alert('Success', 'Deposit confirmed! Thank you for using CashJama.', [
-        { text: 'OK', onPress: () => router.push('/(user)/home') }
-      ]);
+      
+      // Update local state immediately
+      setDeposit(prev => prev ? { ...prev, status: 'completed' } : null);
+      
+      // Show success modal then navigate
+      setShowSuccessModal(true);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.detail || 'Failed to confirm deposit');
+      console.error('[Tracking] Confirm error:', error.response?.data || error.message);
+      setShowConfirmModal(false);
+      setErrorMessage(error.response?.data?.detail || 'Failed to confirm deposit. Please try again.');
+      setShowErrorModal(true);
     } finally {
       setIsConfirming(false);
     }
