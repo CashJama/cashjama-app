@@ -1,11 +1,13 @@
 import axios, { AxiosInstance } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Use the frontend URL with /api path - the platform proxy routes /api/* to backend port 8001
-// This works both in web preview and in Expo Go via tunnel
-const BACKEND_URL = 'https://a2e708c3-b75c-4511-98cf-c9a89e600d56-3000.preview.emergentagent.com';
+// Use the ngrok tunnel URL for API access
+// The ngrok tunnel (cash2bank.ngrok.io) forwards to localhost:3000
+// But we need to access the backend on localhost:8001
+// Since the platform proxy doesn't work externally, we'll use the ngrok tunnel + local proxy
+const BACKEND_URL = 'https://cash2bank.ngrok.io';
 
-console.log('[API] Using proxy URL:', BACKEND_URL);
+console.log('[API] Using ngrok tunnel URL:', BACKEND_URL);
 
 // Callback for auth expiry - will be set by AuthContext
 let onAuthExpiry: (() => void) | null = null;
@@ -15,7 +17,7 @@ class ApiService {
   private authToken: string | null = null;
 
   constructor() {
-    // Use /api path - platform proxy routes this to backend
+    // Use /api path - we'll set up a proxy on expo to forward this to backend
     const baseURL = `${BACKEND_URL}/api`;
     
     this.instance = axios.create({
