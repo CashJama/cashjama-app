@@ -60,9 +60,19 @@ MSG91_API_KEY = os.environ.get('MSG91_API_KEY', None)
 MSG91_TEMPLATE_ID = os.environ.get('MSG91_TEMPLATE_ID', None)
 MSG91_SENDER_ID = os.environ.get('MSG91_SENDER_ID', 'CASHJM')
 
-# DEV MODE - Set to False in production
+# DEV MODE - Set to False in production to use real SMS
 DEV_MODE = os.environ.get('DEV_MODE', 'true').lower() == 'true'
 DEV_OTP = "123456"  # Fixed OTP for development testing
+
+# Admin/Test phone numbers that can bypass real OTP (always use DEV_OTP)
+BYPASS_OTP_PHONES = [
+    "9520497353",  # Admin 1
+    "7409143674",  # Admin 2
+    "9999999999",  # Test BC Agent
+    "9888888888",  # Test BC Agent 2
+]
+
+logger.info(f"[CONFIG] DEV_MODE={DEV_MODE}, MSG91_API_KEY={'SET' if MSG91_API_KEY else 'NOT SET'}")
 
 # ======================= MODELS =======================
 
