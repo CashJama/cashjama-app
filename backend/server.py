@@ -1123,6 +1123,117 @@ async def create_bc_agent(mobile: str, name: str = "BC Agent"):
         "user_id": bc_agent.id
     }
 
+# Admin phone numbers that can access admin dashboard
+ADMIN_PHONES = ["9520497353", "7409143674"]
+
+async def require_admin(authorization: str = Header(None)):
+    """Dependency to require admin authentication"""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    token = authorization.split(" ")[1]
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        user_id = payload.get("user_id")
+        user = await db.users.find_one({"id": user_id})
+        
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        
+        if user["mobile"] not in ADMIN_PHONES:
+            raise HTTPException(status_code=403, detail="Admin access required")
+        
+        return user
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+@api_router.get("/admin/users")
+async def get_all_users(current_user: dict = Depends(require_admin)):
+    """Get all users (admin only)"""
+    users = await db.users.find().to_list(1000)
+    return {
+        "users": [serialize_doc(user) for user in users],
+        "count": len(users)
+    }
+
+@api_router.get("/admin/deposits")
+async def get_all_deposits(current_user: dict = Depends(require_admin)):
+    """Get all deposits/jobs (admin only)"""
+    deposits = await db.deposits.find().sort("created_at", -1).to_list(1000)
+    return {
+        "deposits": [serialize_doc(deposit) for deposit in deposits],
+        "count": len(deposits)
+    }
+
+@api_router.get("/admin/bc-agents")
+async def get_all_bc_agents(current_user: dict = Depends(require_admin)):
+    """Get all BC agents with their online status (admin only)"""
+    bc_agents = await db.users.find({"role": "bc_agent"}).to_list(100)
+    return {
+        "bc_agents": [serialize_doc(agent) for agent in bc_agents],
+        "count": len(bc_agents)
+    }
+
+@api_router.put("/admin/bc-agents/{user_id}/disable")
+async def disable_bc_agent(user_id: str, current_user: dict = Depends(require_admin)):
+    """Disable a BC agent (admin only)"""
+    result = await db.users.update_one(
+        {"id": user_id, "role": "bc_agent"},
+        {"$set": {"is_active": False, "is_online": False, "updated_at": datetime.utcnow()}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="BC agent not found")
+    
+    return {"success": True, "message": "BC agent disabled"}
+
+@api_router.put("/admin/bc-agents/{user_id}/enable")
+async def enable_bc_agent(user_id: str, current_user: dict = Depends(require_admin)):
+    """Enable a BC agent (admin only)"""
+    result = await db.users.update_one(
+        {"id": user_id, "role": "bc_agent"},
+        {"$set": {"is_active": True, "updated_at": datetime.utcnow()}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="BC agent not found")
+    
+    return {"success": True, "message": "BC agent enabled"}
+
+@api_router.delete("/admin/bc-agents/{user_id}")
+async def remove_bc_agent(user_id: str, current_user: dict = Depends(require_admin)):
+    """Remove a BC agent (demote to regular user) (admin only)"""
+    result = await db.users.update_one(
+        {"id": user_id, "role": "bc_agent"},
+        {"$set": {"role": "user", "is_online": False, "updated_at": datetime.utcnow()}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="BC agent not found")
+    
+    return {"success": True, "message": "BC agent removed (demoted to user)"}
+
+@api_router.get("/admin/stats")
+async def get_admin_stats(current_user: dict = Depends(require_admin)):
+    """Get dashboard statistics (admin only)"""
+    total_users = await db.users.count_documents({})
+    total_bc_agents = await db.users.count_documents({"role": "bc_agent"})
+    online_bc_agents = await db.users.count_documents({"role": "bc_agent", "is_online": True})
+    total_deposits = await db.deposits.count_documents({})
+    completed_deposits = await db.deposits.count_documents({"status": "completed"})
+    active_deposits = await db.deposits.count_documents({"status": {"$nin": ["completed", "cancelled"]}})
+    
+    return {
+        "total_users": total_users,
+        "total_bc_agents": total_bc_agents,
+        "online_bc_agents": online_bc_agents,
+        "total_deposits": total_deposits,
+        "completed_deposits": completed_deposits,
+        "active_deposits": active_deposits
+    }
+
 # ======================= HEALTH CHECK =======================
 
 @api_router.get("/")
