@@ -227,32 +227,99 @@ async def get_current_user(authorization: str = Header(None)):
         raise HTTPException(status_code=401, detail=str(e))
 
 async def send_otp_via_msg91(mobile: str, otp: str) -> bool:
-    """Send OTP via MSG91 API - Production ready hook"""
+    """Send OTP via MSG91 API"""
+    # Check if phone is in bypass list (admin/test numbers)
+    if mobile in BYPASS_OTP_PHONES:
+        logger.info(f"[MSG91] Bypass phone {mobile} - using dev OTP")
+        return True
+    
+    # If no API key, use mock mode
     if not MSG91_API_KEY:
-        # Mock mode - just log the OTP
-        logger.info(f"[MOCK OTP] Sending OTP {otp} to {mobile}")
+        logger.info(f"[MOCK OTP] Would send OTP {otp} to {mobile} (MSG91 not configured)")
+        return True
+    
+    if not MSG91_TEMPLATE_ID:
+        logger.error("[MSG91] Template ID not configured")
+        return False
+    
+    try:
+        # MSG91 Send OTP API
+        url = "https://control.msg91.com/api/v5/otp"
+        
+        payload = {
+            "template_id": MSG91_TEMPLATE_ID,
+            "mobile": f"91{mobile}",  # Add country code
+            "authkey": MSG91_API_KEY,
+            "otp": otp,
+            "otp_length": 6,
+            "otp_expiry": 5  # 5 minutes expiry
+        }
+        
+        headers = {
+            "Content-Type": "application/json",
+            "authkey": MSG91_API_KEY
+        }
+        
+        logger.info(f"[MSG91] Sending OTP to 91{mobile}...")
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        
+        logger.info(f"[MSG91] Response: {response.status_code} - {response.text}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            if result.get("type") == "success":
+                logger.info(f"[MSG91] OTP sent successfully to {mobile}")
+                return True
+            else:
+                logger.error(f"[MSG91] API returned error: {result}")
+                return False
+        else:
+            logger.error(f"[MSG91] HTTP error {response.status_code}: {response.text}")
+            return False
+            
+    except requests.Timeout:
+        logger.error(f"[MSG91] Timeout sending OTP to {mobile}")
+        return False
+    except Exception as e:
+        logger.error(f"[MSG91] Error sending OTP: {str(e)}")
+        return False
+
+async def resend_otp_via_msg91(mobile: str) -> bool:
+    """Resend OTP via MSG91 API"""
+    # Check if phone is in bypass list
+    if mobile in BYPASS_OTP_PHONES:
+        logger.info(f"[MSG91] Bypass phone {mobile} - resend not needed")
+        return True
+    
+    if not MSG91_API_KEY:
+        logger.info(f"[MOCK OTP] Would resend OTP to {mobile} (MSG91 not configured)")
         return True
     
     try:
-        url = "https://control.msg91.com/api/v5/otp"
-        payload = {
-            "template_id": MSG91_TEMPLATE_ID,
-            "mobile": f"91{mobile}",
+        # MSG91 Resend OTP API
+        url = "https://control.msg91.com/api/v5/otp/retry"
+        
+        params = {
             "authkey": MSG91_API_KEY,
-            "otp": otp
+            "mobile": f"91{mobile}",
+            "retrytype": "text"  # Can be "text" or "voice"
         }
-        headers = {
-            "Content-Type": "application/json"
-        }
-        response = requests.post(url, json=payload, headers=headers)
+        
+        logger.info(f"[MSG91] Resending OTP to 91{mobile}...")
+        response = requests.post(url, params=params, timeout=30)
+        
+        logger.info(f"[MSG91] Resend response: {response.status_code} - {response.text}")
+        
         if response.status_code == 200:
-            logger.info(f"[MSG91] OTP sent successfully to {mobile}")
-            return True
-        else:
-            logger.error(f"[MSG91] Failed to send OTP: {response.text}")
-            return False
+            result = response.json()
+            if result.get("type") == "success":
+                logger.info(f"[MSG91] OTP resent successfully to {mobile}")
+                return True
+        
+        return False
+        
     except Exception as e:
-        logger.error(f"[MSG91] Error sending OTP: {str(e)}")
+        logger.error(f"[MSG91] Error resending OTP: {str(e)}")
         return False
 
 def mask_mobile(mobile: str) -> str:
