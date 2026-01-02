@@ -465,23 +465,36 @@ async def verify_otp(request: VerifyOTPRequest):
     # Find or create user
     user = await db.users.find_one({"mobile": mobile})
     
+    # Get role based on phone number
+    assigned_role = get_role_for_phone(mobile)
+    
     if not user:
-        # Create new user
+        # Create new user with correct role
         new_user = User(
             mobile=mobile,
+            role=assigned_role,
             is_verified=True
         )
         await db.users.insert_one(new_user.dict())
         user = new_user.dict()
+        logger.info(f"[AUTH] Created new user {mobile} with role: {assigned_role}")
     else:
-        # Update existing user
+        # Update existing user - also update role if it changed
+        update_fields = {"is_verified": True, "updated_at": datetime.utcnow()}
+        
+        # Always enforce correct role based on phone number
+        if user.get("role") != assigned_role:
+            update_fields["role"] = assigned_role
+            logger.info(f"[AUTH] Updated user {mobile} role from {user.get('role')} to {assigned_role}")
+        
         await db.users.update_one(
             {"id": user["id"]},
-            {"$set": {"is_verified": True, "updated_at": datetime.utcnow()}}
+            {"$set": update_fields}
         )
+        user["role"] = assigned_role  # Update local copy
     
-    # Generate JWT token
-    token = create_jwt_token(user["id"], mobile, user.get("role", "user"))
+    # Generate JWT token with correct role
+    token = create_jwt_token(user["id"], mobile, assigned_role)
     
     return AuthResponse(
         success=True,
@@ -491,7 +504,7 @@ async def verify_otp(request: VerifyOTPRequest):
             "id": user["id"],
             "mobile": user["mobile"],
             "name": user.get("name"),
-            "role": user.get("role", "user"),
+            "role": assigned_role,
             "is_verified": True
         }
     )
