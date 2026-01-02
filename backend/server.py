@@ -64,13 +64,21 @@ MSG91_SENDER_ID = os.environ.get('MSG91_SENDER_ID', 'CASHJM')
 DEV_MODE = os.environ.get('DEV_MODE', 'true').lower() == 'true'
 DEV_OTP = "123456"  # Fixed OTP for development testing
 
-# Admin/Test phone numbers that can bypass real OTP (always use DEV_OTP)
-BYPASS_OTP_PHONES = [
-    "9520497353",  # Admin 1
-    "7409143674",  # Admin 2
-    "9999999999",  # Test BC Agent
-    "9888888888",  # Test BC Agent 2
-]
+# Role assignment by phone number
+ADMIN_PHONES = ["9520497353", "7409143674"]
+BC_AGENT_PHONES = ["9999999999", "9888888888"]
+
+# Bypass OTP phones (admin + BC agents for testing)
+BYPASS_OTP_PHONES = ADMIN_PHONES + BC_AGENT_PHONES
+
+def get_role_for_phone(mobile: str) -> str:
+    """Get the role for a phone number"""
+    if mobile in ADMIN_PHONES:
+        return "admin"
+    elif mobile in BC_AGENT_PHONES:
+        return "bc_agent"
+    else:
+        return "user"
 
 logger.info(f"[CONFIG] DEV_MODE={DEV_MODE}, MSG91_API_KEY={'SET' if MSG91_API_KEY else 'NOT SET'}")
 
