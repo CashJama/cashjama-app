@@ -411,11 +411,15 @@ async def verify_otp(request: VerifyOTPRequest):
     mobile = request.mobile.strip()
     otp = request.otp.strip()
     
-    # DEV MODE: Accept fixed OTP bypass
-    is_dev_otp = DEV_MODE and otp == DEV_OTP
+    # Check if this is a bypass phone (admin/test numbers) - always accept DEV_OTP
+    is_bypass_phone = mobile in BYPASS_OTP_PHONES
+    
+    # DEV MODE: Accept fixed OTP bypass for all phones
+    # BYPASS PHONES: Accept DEV_OTP even in production
+    is_dev_otp = (DEV_MODE and otp == DEV_OTP) or (is_bypass_phone and otp == DEV_OTP)
     
     if is_dev_otp:
-        logger.info(f"[DEV MODE] Using bypass OTP {DEV_OTP} for {mobile}")
+        logger.info(f"[BYPASS] Using dev OTP for {mobile} (bypass_phone={is_bypass_phone}, dev_mode={DEV_MODE})")
     
     # Find OTP log (skip if using dev OTP)
     otp_log = await db.otp_logs.find_one({
