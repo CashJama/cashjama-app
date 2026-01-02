@@ -496,6 +496,16 @@ async def resend_otp(request: ResendOTPRequest):
     if len(mobile) != 10 or not mobile.isdigit():
         raise HTTPException(status_code=400, detail="Invalid mobile number")
     
+    # For bypass phones, just return success
+    if mobile in BYPASS_OTP_PHONES:
+        logger.info(f"[BYPASS] Resend OTP for bypass phone {mobile} - using dev OTP")
+        return OTPResponse(
+            success=True,
+            message="OTP resent successfully (use 123456)",
+            expires_in=60,
+            resend_available=True
+        )
+    
     # Find existing OTP
     existing_otp = await db.otp_logs.find_one({
         "mobile": mobile,
@@ -508,7 +518,23 @@ async def resend_otp(request: ResendOTPRequest):
         if resend_count >= 3:
             raise HTTPException(status_code=429, detail="Maximum resend attempts (3) exceeded. Please try after 10 minutes.")
     
-    # Generate new OTP
+    # Try MSG91 native retry first (if configured)
+    if MSG91_API_KEY and existing_otp:
+        sent = await resend_otp_via_msg91(mobile)
+        if sent:
+            # Update resend count
+            await db.otp_logs.update_one(
+                {"id": existing_otp["id"]},
+                {"$inc": {"resend_count": 1}}
+            )
+            return OTPResponse(
+                success=True,
+                message="OTP resent successfully",
+                expires_in=60,
+                resend_available=(resend_count + 1) < 3
+            )
+    
+    # Fallback: Generate new OTP
     otp = generate_otp()
     expires_at = datetime.utcnow() + timedelta(seconds=60)
     
@@ -530,7 +556,10 @@ async def resend_otp(request: ResendOTPRequest):
     # Send OTP
     sent = await send_otp_via_msg91(mobile, otp)
     
-    logger.info(f"OTP resent to {mobile}: {otp}")  # Remove in production
+    if not sent and MSG91_API_KEY:
+        raise HTTPException(status_code=500, detail="Failed to resend OTP. Please try again.")
+    
+    logger.info(f"OTP resent to {mobile}: {otp}")
     
     return OTPResponse(
         success=True,
