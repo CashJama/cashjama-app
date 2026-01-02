@@ -15,7 +15,11 @@ import string
 import requests
 
 ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+
+# Load .env file if it exists (local development only)
+env_file = ROOT_DIR / '.env'
+if env_file.exists():
+    load_dotenv(env_file)
 
 # Create the main app FIRST
 app = FastAPI(title="CashJama API", version="1.0.0")
@@ -39,8 +43,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# MongoDB connection - supports both local (MONGO_URL) and cloud (MONGODB_URI)
-mongo_url = os.environ.get('MONGODB_URI') or os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+# MongoDB connection - reads from MONGO_URL env var (works with Render/Railway)
+# Falls back to localhost for local development
+mongo_url = os.environ.get('MONGO_URL') or os.environ.get('MONGODB_URI') or 'mongodb://localhost:27017'
+logger.info(f"Connecting to MongoDB: {mongo_url[:20]}...")
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ.get('DB_NAME', 'cashjama')]
 
