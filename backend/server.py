@@ -65,20 +65,48 @@ DEV_MODE = os.environ.get('DEV_MODE', 'true').lower() == 'true'
 DEV_OTP = "123456"  # Fixed OTP for development testing
 
 # Role assignment by phone number
-ADMIN_PHONES = ["9520497353", "7409143674"]
-BC_AGENT_PHONES = ["9999999999", "9888888888"]
+ADMIN_PHONES = ["9520497353"]
+BC_PHONES = ["9888888888", "8193840499", "9761371436"]  # Test + Pilot BC phones
 
-# Bypass OTP phones (admin + BC agents for testing)
-BYPASS_OTP_PHONES = ADMIN_PHONES + BC_AGENT_PHONES
+# Bypass OTP phones (admin + BC for testing)
+BYPASS_OTP_PHONES = ADMIN_PHONES + BC_PHONES
 
 def get_role_for_phone(mobile: str) -> str:
-    """Get the role for a phone number"""
+    """Get the role for a phone number - static check only"""
     if mobile in ADMIN_PHONES:
         return "admin"
-    elif mobile in BC_AGENT_PHONES:
-        return "bc_agent"
+    elif mobile in BC_PHONES:
+        return "bc"
     else:
         return "user"
+
+async def get_role_for_phone_with_db(mobile: str, db_ref) -> str:
+    """
+    Get the role for a phone number.
+    Priority:
+    1. Hardcoded admin phones -> admin
+    2. Hardcoded BC phones -> bc
+    3. DB role == bc -> bc (admin-created BCs)
+    4. Default -> user
+    """
+    # First check hardcoded roles
+    if mobile in ADMIN_PHONES:
+        logger.info(f"[ROLE] {mobile} is hardcoded admin")
+        return "admin"
+    if mobile in BC_PHONES:
+        logger.info(f"[ROLE] {mobile} is hardcoded BC")
+        return "bc"
+    
+    # Check if user exists in DB with bc role (created by admin)
+    existing_user = await db_ref.users.find_one({"mobile": mobile})
+    logger.info(f"[ROLE] DB lookup for {mobile}: found={existing_user is not None}, role={existing_user.get('role') if existing_user else 'N/A'}")
+    
+    if existing_user and existing_user.get("role") == "bc":
+        logger.info(f"[ROLE] {mobile} is admin-created BC from DB")
+        return "bc"
+    
+    logger.info(f"[ROLE] {mobile} defaults to user")
+    return "user"
 
 logger.info(f"[CONFIG] DEV_MODE={DEV_MODE}, MSG91_API_KEY={'SET' if MSG91_API_KEY else 'NOT SET'}")
 
@@ -185,7 +213,7 @@ class OTPResponse(BaseModel):
 def calculate_service_fee(amount: float) -> float:
     """Calculate service fee based on flat slabs"""
     if amount < 300:
-        raise ValueError("Minimum deposit amount is ₹300")
+        raise ValueError("Minimum deposit amount is â‚¹300")
     elif amount < 1000:
         return 40.0
     elif amount < 2000:
@@ -465,36 +493,52 @@ async def verify_otp(request: VerifyOTPRequest):
     # Find or create user
     user = await db.users.find_one({"mobile": mobile})
     
-    # Get role based on phone number
-    assigned_role = get_role_for_phone(mobile)
+    # Determine the final role
+    # Priority: 1) Hardcoded admin, 2) Hardcoded BC, 3) DB role=bc, 4) Default user
+    if user and user.get("role") == "bc":
+        # NEVER downgrade an existing BC to user
+        final_role = "bc"
+        logger.info(f"[AUTH] Preserving existing BC role for {mobile}")
+    else:
+        # Check hardcoded lists and DB
+        final_role = await get_role_for_phone_with_db(mobile, db)
     
     if not user:
         # Create new user with correct role
         new_user = User(
             mobile=mobile,
-            role=assigned_role,
+            role=final_role,
             is_verified=True
         )
         await db.users.insert_one(new_user.dict())
         user = new_user.dict()
-        logger.info(f"[AUTH] Created new user {mobile} with role: {assigned_role}")
+        logger.info(f"[AUTH] Created new user {mobile} with role: {final_role}")
     else:
-        # Update existing user - also update role if it changed
+        # Update existing user - ONLY update role if upgrading (never downgrade bc)
         update_fields = {"is_verified": True, "updated_at": datetime.utcnow()}
         
-        # Always enforce correct role based on phone number
-        if user.get("role") != assigned_role:
-            update_fields["role"] = assigned_role
-            logger.info(f"[AUTH] Updated user {mobile} role from {user.get('role')} to {assigned_role}")
+        current_role = user.get("role", "user")
+        
+        # Only update role if:
+        # 1. Current role is not "bc" (never downgrade BC)
+        # 2. OR final_role is "admin" (admin always wins)
+        if current_role != "bc" or final_role == "admin":
+            if current_role != final_role:
+                update_fields["role"] = final_role
+                logger.info(f"[AUTH] Updated user {mobile} role from {current_role} to {final_role}")
+        else:
+            # Keep existing bc role
+            final_role = "bc"
+            logger.info(f"[AUTH] Keeping existing BC role for {mobile}")
         
         await db.users.update_one(
             {"id": user["id"]},
             {"$set": update_fields}
         )
-        user["role"] = assigned_role  # Update local copy
+        user["role"] = final_role  # Update local copy
     
     # Generate JWT token with correct role
-    token = create_jwt_token(user["id"], mobile, assigned_role)
+    token = create_jwt_token(user["id"], mobile, final_role)
     
     return AuthResponse(
         success=True,
@@ -504,7 +548,7 @@ async def verify_otp(request: VerifyOTPRequest):
             "id": user["id"],
             "mobile": user["mobile"],
             "name": user.get("name"),
-            "role": assigned_role,
+            "role": final_role,
             "is_verified": True
         }
     )
@@ -642,7 +686,7 @@ async def logout(current_user: dict = Depends(get_current_user)):
 async def get_fee_calculation(amount: float):
     """Calculate service fee for a given amount"""
     if amount < 300:
-        raise HTTPException(status_code=400, detail="Minimum deposit amount is ₹300")
+        raise HTTPException(status_code=400, detail="Minimum deposit amount is â‚¹300")
     
     service_fee = calculate_service_fee(amount)
     return {
@@ -650,10 +694,10 @@ async def get_fee_calculation(amount: float):
         "service_fee": service_fee,
         "total_cash": amount + service_fee,
         "fee_slabs": [
-            {"range": "₹300 - ₹999", "fee": 40},
-            {"range": "₹1000 - ₹1999", "fee": 50},
-            {"range": "₹2000 - ₹4999", "fee": 70},
-            {"range": "₹5000+", "fee": 100}
+            {"range": "â‚¹300 - â‚¹999", "fee": 40},
+            {"range": "â‚¹1000 - â‚¹1999", "fee": 50},
+            {"range": "â‚¹2000 - â‚¹4999", "fee": 70},
+            {"range": "â‚¹5000+", "fee": 100}
         ]
     }
 
@@ -662,7 +706,7 @@ async def create_deposit(request: CreateDepositRequest, current_user: dict = Dep
     """Create a new deposit request"""
     # Validate amount
     if request.amount < 300:
-        raise HTTPException(status_code=400, detail="Minimum deposit amount is ₹300")
+        raise HTTPException(status_code=400, detail="Minimum deposit amount is â‚¹300")
     
     # Check if user has any pending deposit
     pending = await db.deposits.find_one({
@@ -791,9 +835,9 @@ class JobOTPVerify(BaseModel):
     otp: str
 
 async def require_bc_agent(current_user: dict = Depends(get_current_user)):
-    """Dependency to require BC agent role"""
-    if current_user.get("role") != "bc_agent":
-        raise HTTPException(status_code=403, detail="BC agent access required")
+    """Dependency to require BC role"""
+    if current_user.get("role") != "bc":
+        raise HTTPException(status_code=403, detail="BC access required")
     return current_user
 
 @api_router.get("/bc/jobs/available")
@@ -1223,39 +1267,8 @@ async def get_bc_job_details(deposit_id: str, current_user: dict = Depends(requi
     
     return serialize_doc(deposit)
 
-# ======================= ADMIN: CREATE BC AGENT =======================
-
-@api_router.post("/admin/create-bc-agent")
-async def create_bc_agent(mobile: str, name: str = "BC Agent"):
-    """Create a BC agent account (for testing/pilot)"""
-    # Check if user exists
-    existing = await db.users.find_one({"mobile": mobile})
-    
-    if existing:
-        # Update role to bc_agent
-        await db.users.update_one(
-            {"mobile": mobile},
-            {"$set": {"role": "bc_agent", "name": name, "updated_at": datetime.utcnow()}}
-        )
-        return {"success": True, "message": "User upgraded to BC agent"}
-    
-    # Create new BC agent
-    bc_agent = User(
-        mobile=mobile,
-        name=name,
-        role="bc_agent",
-        is_verified=True
-    )
-    await db.users.insert_one(bc_agent.dict())
-    
-    return {
-        "success": True,
-        "message": "BC agent created",
-        "user_id": bc_agent.id
-    }
-
-# Admin phone numbers that can access admin dashboard
-ADMIN_PHONES = ["9520497353", "7409143674"]
+# Admin phone numbers for require_admin dependency
+ADMIN_DASHBOARD_PHONES = ["9520497353"]  # Only main admin
 
 async def require_admin(authorization: str = Header(None)):
     """Dependency to require admin authentication"""
@@ -1271,7 +1284,7 @@ async def require_admin(authorization: str = Header(None)):
         if not user:
             raise HTTPException(status_code=401, detail="User not found")
         
-        if user["mobile"] not in ADMIN_PHONES:
+        if user["mobile"] not in ADMIN_DASHBOARD_PHONES:
             raise HTTPException(status_code=403, detail="Admin access required")
         
         return user
@@ -1279,6 +1292,40 @@ async def require_admin(authorization: str = Header(None)):
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+# ======================= ADMIN ENDPOINTS =======================
+
+@api_router.post("/admin/create-bc-agent")
+async def create_bc_agent(mobile: str, name: str = "BC Agent", current_user: dict = Depends(require_admin)):
+    """Create a BC account (admin only)"""
+    # Check if user exists
+    existing = await db.users.find_one({"mobile": mobile})
+    
+    if existing:
+        # Update role to bc
+        await db.users.update_one(
+            {"mobile": mobile},
+            {"$set": {"role": "bc", "name": name, "updated_at": datetime.utcnow()}}
+        )
+        logger.info(f"[ADMIN] User {mobile} upgraded to BC by admin {current_user['mobile']}")
+        return {"success": True, "message": "User upgraded to BC"}
+    
+    # Create new BC
+    bc_user = User(
+        mobile=mobile,
+        name=name,
+        role="bc",
+        is_verified=True
+    )
+    await db.users.insert_one(bc_user.dict())
+    
+    logger.info(f"[ADMIN] New BC {mobile} created by admin {current_user['mobile']}")
+    
+    return {
+        "success": True,
+        "message": "BC created successfully",
+        "user_id": bc_user.id
+    }
 
 @api_router.get("/admin/users")
 async def get_all_users(current_user: dict = Depends(require_admin)):
@@ -1300,8 +1347,8 @@ async def get_all_deposits(current_user: dict = Depends(require_admin)):
 
 @api_router.get("/admin/bc-agents")
 async def get_all_bc_agents(current_user: dict = Depends(require_admin)):
-    """Get all BC agents with their online status (admin only)"""
-    bc_agents = await db.users.find({"role": "bc_agent"}).to_list(100)
+    """Get all BCs with their online status (admin only)"""
+    bc_agents = await db.users.find({"role": "bc"}).to_list(100)
     return {
         "bc_agents": [serialize_doc(agent) for agent in bc_agents],
         "count": len(bc_agents)
@@ -1309,49 +1356,49 @@ async def get_all_bc_agents(current_user: dict = Depends(require_admin)):
 
 @api_router.put("/admin/bc-agents/{user_id}/disable")
 async def disable_bc_agent(user_id: str, current_user: dict = Depends(require_admin)):
-    """Disable a BC agent (admin only)"""
+    """Disable a BC (admin only)"""
     result = await db.users.update_one(
-        {"id": user_id, "role": "bc_agent"},
+        {"id": user_id, "role": "bc"},
         {"$set": {"is_active": False, "is_online": False, "updated_at": datetime.utcnow()}}
     )
     
     if result.modified_count == 0:
-        raise HTTPException(status_code=404, detail="BC agent not found")
+        raise HTTPException(status_code=404, detail="BC not found")
     
-    return {"success": True, "message": "BC agent disabled"}
+    return {"success": True, "message": "BC disabled"}
 
 @api_router.put("/admin/bc-agents/{user_id}/enable")
 async def enable_bc_agent(user_id: str, current_user: dict = Depends(require_admin)):
-    """Enable a BC agent (admin only)"""
+    """Enable a BC (admin only)"""
     result = await db.users.update_one(
-        {"id": user_id, "role": "bc_agent"},
+        {"id": user_id, "role": "bc"},
         {"$set": {"is_active": True, "updated_at": datetime.utcnow()}}
     )
     
     if result.modified_count == 0:
-        raise HTTPException(status_code=404, detail="BC agent not found")
+        raise HTTPException(status_code=404, detail="BC not found")
     
-    return {"success": True, "message": "BC agent enabled"}
+    return {"success": True, "message": "BC enabled"}
 
 @api_router.delete("/admin/bc-agents/{user_id}")
 async def remove_bc_agent(user_id: str, current_user: dict = Depends(require_admin)):
-    """Remove a BC agent (demote to regular user) (admin only)"""
+    """Remove a BC (demote to regular user) (admin only)"""
     result = await db.users.update_one(
-        {"id": user_id, "role": "bc_agent"},
+        {"id": user_id, "role": "bc"},
         {"$set": {"role": "user", "is_online": False, "updated_at": datetime.utcnow()}}
     )
     
     if result.modified_count == 0:
-        raise HTTPException(status_code=404, detail="BC agent not found")
+        raise HTTPException(status_code=404, detail="BC not found")
     
-    return {"success": True, "message": "BC agent removed (demoted to user)"}
+    return {"success": True, "message": "BC removed (demoted to user)"}
 
 @api_router.get("/admin/stats")
 async def get_admin_stats(current_user: dict = Depends(require_admin)):
     """Get dashboard statistics (admin only)"""
     total_users = await db.users.count_documents({})
-    total_bc_agents = await db.users.count_documents({"role": "bc_agent"})
-    online_bc_agents = await db.users.count_documents({"role": "bc_agent", "is_online": True})
+    total_bc_agents = await db.users.count_documents({"role": "bc"})
+    online_bc_agents = await db.users.count_documents({"role": "bc", "is_online": True})
     total_deposits = await db.deposits.count_documents({})
     completed_deposits = await db.deposits.count_documents({"status": "completed"})
     active_deposits = await db.deposits.count_documents({"status": {"$nin": ["completed", "cancelled"]}})
