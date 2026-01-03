@@ -21,4 +21,4 @@ RUN yarn global add serve
 EXPOSE 10000
 
 # Serve the built app
-CMD ["serve", "-s", "dist", "-l", "10000"]
+CMD ["serve", "-s", "dist", "-l", "10000", "--single"]
