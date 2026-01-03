@@ -490,46 +490,63 @@ async def verify_otp(request: VerifyOTPRequest):
             {"$set": {"verified": True}}
         )
     
-    # Find or create user
-    user = await db.users.find_one({"mobile": mobile})
+    # Find or create user - normalize mobile first
+    # Strip +91 or 91 prefix if present
+    normalized_mobile = mobile
+    if mobile.startswith("+91"):
+        normalized_mobile = mobile[3:]
+    elif mobile.startswith("91") and len(mobile) == 12:
+        normalized_mobile = mobile[2:]
+    
+    logger.info(f"[AUTH] verify-otp called with mobile={mobile}, normalized={normalized_mobile}")
+    
+    user = await db.users.find_one({"mobile": normalized_mobile})
+    logger.info(f"[AUTH] DB lookup result: user_found={user is not None}, db_role={user.get('role') if user else 'N/A'}")
     
     # Determine the final role
-    # Priority: 1) Hardcoded admin, 2) Hardcoded BC, 3) DB role=bc, 4) Default user
+    # Priority: 1) Existing BC in DB, 2) Hardcoded admin, 3) Hardcoded BC, 4) Default user
     if user and user.get("role") == "bc":
         # NEVER downgrade an existing BC to user
         final_role = "bc"
-        logger.info(f"[AUTH] Preserving existing BC role for {mobile}")
+        logger.info(f"[AUTH] PRESERVING existing BC role for {normalized_mobile}")
     else:
         # Check hardcoded lists and DB
-        final_role = await get_role_for_phone_with_db(mobile, db)
+        final_role = await get_role_for_phone_with_db(normalized_mobile, db)
+    
+    logger.info(f"[AUTH] Determined final_role={final_role} for {normalized_mobile}")
     
     if not user:
         # Create new user with correct role
         new_user = User(
-            mobile=mobile,
+            mobile=normalized_mobile,
             role=final_role,
             is_verified=True
         )
         await db.users.insert_one(new_user.dict())
         user = new_user.dict()
-        logger.info(f"[AUTH] Created new user {mobile} with role: {final_role}")
+        logger.info(f"[AUTH] CREATED new user {normalized_mobile} with role: {final_role}")
     else:
         # Update existing user - ONLY update role if upgrading (never downgrade bc)
         update_fields = {"is_verified": True, "updated_at": datetime.utcnow()}
         
         current_role = user.get("role", "user")
+        logger.info(f"[AUTH] Existing user {normalized_mobile}: current_role={current_role}, final_role={final_role}")
         
         # Only update role if:
         # 1. Current role is not "bc" (never downgrade BC)
         # 2. OR final_role is "admin" (admin always wins)
-        if current_role != "bc" or final_role == "admin":
-            if current_role != final_role:
-                update_fields["role"] = final_role
-                logger.info(f"[AUTH] Updated user {mobile} role from {current_role} to {final_role}")
-        else:
-            # Keep existing bc role
-            final_role = "bc"
-            logger.info(f"[AUTH] Keeping existing BC role for {mobile}")
+        if current_role == "bc":
+            # NEVER change BC role (except to admin)
+            if final_role == "admin":
+                update_fields["role"] = "admin"
+                final_role = "admin"
+                logger.info(f"[AUTH] UPGRADING BC to admin for {normalized_mobile}")
+            else:
+                final_role = "bc"
+                logger.info(f"[AUTH] KEEPING BC role for {normalized_mobile} (no downgrade)")
+        elif current_role != final_role:
+            update_fields["role"] = final_role
+            logger.info(f"[AUTH] UPDATING role from {current_role} to {final_role} for {normalized_mobile}")
         
         await db.users.update_one(
             {"id": user["id"]},
@@ -538,7 +555,9 @@ async def verify_otp(request: VerifyOTPRequest):
         user["role"] = final_role  # Update local copy
     
     # Generate JWT token with correct role
-    token = create_jwt_token(user["id"], mobile, final_role)
+    token = create_jwt_token(user["id"], normalized_mobile, final_role)
+    
+    logger.info(f"[AUTH] ===== FINAL RESPONSE: mobile={normalized_mobile}, role={final_role} =====")
     
     return AuthResponse(
         success=True,
