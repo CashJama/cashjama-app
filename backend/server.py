@@ -71,11 +71,25 @@ BC_PHONES = ["9888888888", "8193840499", "9761371436"]  # Test + Pilot BC phones
 # Bypass OTP phones (admin + BC for testing)
 BYPASS_OTP_PHONES = ADMIN_PHONES + BC_PHONES
 
+def normalize_phone(mobile: str) -> str:
+    """
+    Normalize phone number to 10-digit format.
+    Strips +91, 91 prefix and any whitespace.
+    This MUST be used everywhere phone numbers are processed.
+    """
+    phone = mobile.strip().replace(" ", "").replace("-", "")
+    if phone.startswith("+91"):
+        phone = phone[3:]
+    elif phone.startswith("91") and len(phone) == 12:
+        phone = phone[2:]
+    return phone
+
 def get_role_for_phone(mobile: str) -> str:
     """Get the role for a phone number - static check only"""
-    if mobile in ADMIN_PHONES:
+    normalized = normalize_phone(mobile)
+    if normalized in ADMIN_PHONES:
         return "admin"
-    elif mobile in BC_PHONES:
+    elif normalized in BC_PHONES:
         return "bc"
     else:
         return "user"
@@ -89,23 +103,25 @@ async def get_role_for_phone_with_db(mobile: str, db_ref) -> str:
     3. DB role == bc -> bc (admin-created BCs)
     4. Default -> user
     """
+    normalized = normalize_phone(mobile)
+    
     # First check hardcoded roles
-    if mobile in ADMIN_PHONES:
-        logger.info(f"[ROLE] {mobile} is hardcoded admin")
+    if normalized in ADMIN_PHONES:
+        logger.info(f"[ROLE] {normalized} is hardcoded admin")
         return "admin"
-    if mobile in BC_PHONES:
-        logger.info(f"[ROLE] {mobile} is hardcoded BC")
+    if normalized in BC_PHONES:
+        logger.info(f"[ROLE] {normalized} is hardcoded BC")
         return "bc"
     
     # Check if user exists in DB with bc role (created by admin)
-    existing_user = await db_ref.users.find_one({"mobile": mobile})
-    logger.info(f"[ROLE] DB lookup for {mobile}: found={existing_user is not None}, role={existing_user.get('role') if existing_user else 'N/A'}")
+    existing_user = await db_ref.users.find_one({"mobile": normalized})
+    logger.info(f"[ROLE] DB lookup for {normalized}: found={existing_user is not None}, role={existing_user.get('role') if existing_user else 'N/A'}")
     
     if existing_user and existing_user.get("role") == "bc":
-        logger.info(f"[ROLE] {mobile} is admin-created BC from DB")
+        logger.info(f"[ROLE] {normalized} is admin-created BC from DB")
         return "bc"
     
-    logger.info(f"[ROLE] {mobile} defaults to user")
+    logger.info(f"[ROLE] {normalized} defaults to user")
     return "user"
 
 logger.info(f"[CONFIG] DEV_MODE={DEV_MODE}, MSG91_API_KEY={'SET' if MSG91_API_KEY else 'NOT SET'}")
@@ -491,16 +507,11 @@ async def verify_otp(request: VerifyOTPRequest):
         )
     
     # Find or create user - normalize mobile first
-    # Strip +91 or 91 prefix if present
-    normalized_mobile = mobile
-    if mobile.startswith("+91"):
-        normalized_mobile = mobile[3:]
-    elif mobile.startswith("91") and len(mobile) == 12:
-        normalized_mobile = mobile[2:]
+    mobile = normalize_phone(mobile)
     
-    logger.info(f"[AUTH] verify-otp called with mobile={mobile}, normalized={normalized_mobile}")
+    logger.info(f"[AUTH] verify-otp: normalized mobile={mobile}")
     
-    user = await db.users.find_one({"mobile": normalized_mobile})
+    user = await db.users.find_one({"mobile": mobile})
     logger.info(f"[AUTH] DB lookup result: user_found={user is not None}, db_role={user.get('role') if user else 'N/A'}")
     
     # Determine the final role
@@ -508,29 +519,29 @@ async def verify_otp(request: VerifyOTPRequest):
     if user and user.get("role") == "bc":
         # NEVER downgrade an existing BC to user
         final_role = "bc"
-        logger.info(f"[AUTH] PRESERVING existing BC role for {normalized_mobile}")
+        logger.info(f"[AUTH] PRESERVING existing BC role for {mobile}")
     else:
         # Check hardcoded lists and DB
-        final_role = await get_role_for_phone_with_db(normalized_mobile, db)
+        final_role = await get_role_for_phone_with_db(mobile, db)
     
-    logger.info(f"[AUTH] Determined final_role={final_role} for {normalized_mobile}")
+    logger.info(f"[AUTH] Determined final_role={final_role} for {mobile}")
     
     if not user:
         # Create new user with correct role
         new_user = User(
-            mobile=normalized_mobile,
+            mobile=mobile,
             role=final_role,
             is_verified=True
         )
         await db.users.insert_one(new_user.dict())
         user = new_user.dict()
-        logger.info(f"[AUTH] CREATED new user {normalized_mobile} with role: {final_role}")
+        logger.info(f"[AUTH] CREATED new user {mobile} with role: {final_role}")
     else:
         # Update existing user - ONLY update role if upgrading (never downgrade bc)
         update_fields = {"is_verified": True, "updated_at": datetime.utcnow()}
         
         current_role = user.get("role", "user")
-        logger.info(f"[AUTH] Existing user {normalized_mobile}: current_role={current_role}, final_role={final_role}")
+        logger.info(f"[AUTH] Existing user {mobile}: current_role={current_role}, final_role={final_role}")
         
         # Only update role if:
         # 1. Current role is not "bc" (never downgrade BC)
@@ -540,13 +551,13 @@ async def verify_otp(request: VerifyOTPRequest):
             if final_role == "admin":
                 update_fields["role"] = "admin"
                 final_role = "admin"
-                logger.info(f"[AUTH] UPGRADING BC to admin for {normalized_mobile}")
+                logger.info(f"[AUTH] UPGRADING BC to admin for {mobile}")
             else:
                 final_role = "bc"
-                logger.info(f"[AUTH] KEEPING BC role for {normalized_mobile} (no downgrade)")
+                logger.info(f"[AUTH] KEEPING BC role for {mobile} (no downgrade)")
         elif current_role != final_role:
             update_fields["role"] = final_role
-            logger.info(f"[AUTH] UPDATING role from {current_role} to {final_role} for {normalized_mobile}")
+            logger.info(f"[AUTH] UPDATING role from {current_role} to {final_role} for {mobile}")
         
         await db.users.update_one(
             {"id": user["id"]},
@@ -555,9 +566,9 @@ async def verify_otp(request: VerifyOTPRequest):
         user["role"] = final_role  # Update local copy
     
     # Generate JWT token with correct role
-    token = create_jwt_token(user["id"], normalized_mobile, final_role)
+    token = create_jwt_token(user["id"], mobile, final_role)
     
-    logger.info(f"[AUTH] ===== FINAL RESPONSE: mobile={normalized_mobile}, role={final_role} =====")
+    logger.info(f"[AUTH] ===== FINAL RESPONSE: mobile={mobile}, role={final_role} =====")
     
     return AuthResponse(
         success=True,
@@ -1317,6 +1328,10 @@ async def require_admin(authorization: str = Header(None)):
 @api_router.post("/admin/create-bc-agent")
 async def create_bc_agent(mobile: str, name: str = "BC Agent", current_user: dict = Depends(require_admin)):
     """Create a BC account (admin only)"""
+    # ALWAYS normalize phone to 10 digits
+    mobile = normalize_phone(mobile)
+    logger.info(f"[ADMIN] create-bc-agent: normalized mobile={mobile}")
+    
     # Check if user exists
     existing = await db.users.find_one({"mobile": mobile})
     
@@ -1329,7 +1344,7 @@ async def create_bc_agent(mobile: str, name: str = "BC Agent", current_user: dic
         logger.info(f"[ADMIN] User {mobile} upgraded to BC by admin {current_user['mobile']}")
         return {"success": True, "message": "User upgraded to BC"}
     
-    # Create new BC
+    # Create new BC with normalized phone
     bc_user = User(
         mobile=mobile,
         name=name,
