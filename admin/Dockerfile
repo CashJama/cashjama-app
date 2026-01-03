@@ -14,11 +14,14 @@ COPY . .
 # Build the app
 RUN yarn build
 
+# Copy serve.json to dist for SPA routing config
+COPY serve.json dist/
+
 # Install serve to serve static files
 RUN yarn global add serve
 
 # Expose port
 EXPOSE 10000
 
-# Serve the built app
-CMD ["serve", "-s", "dist", "-l", "10000", "--single"]
+# Serve the built app with SPA mode (-s) and config file
+CMD ["serve", "-s", "dist", "-l", "10000", "-c", "../serve.json"]
